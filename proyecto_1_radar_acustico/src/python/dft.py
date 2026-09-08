@@ -50,10 +50,30 @@ def dft(signal):
     return spectrum
 
 
+
+def magnitude(spectrum):
+    """
+    Calcula la magnitud de cada coeficiente complejo.
+    """
+
+    return [abs(value) for value in spectrum]
+
+
+def phase(spectrum):
+    """
+    Calcula la fase en radianes de cada coeficiente complejo.
+    """
+
+    return [cmath.phase(value) for value in spectrum]
+
+
 if __name__ == "__main__":
     signal = [1, 0, -1, 0]
 
     spectrum = dft(signal)
+
+    magnitudes = magnitude(spectrum)
+    phases = phase(spectrum)
 
     print("Señal:")
     print(signal)
@@ -61,4 +81,9 @@ if __name__ == "__main__":
     print("\nDFT:")
 
     for k, value in enumerate(spectrum):
-        print(f"X[{k}] = {value:.4f}")
+        print(
+            f"k={k}: "
+            f"X[k]={value:.4f}, "
+            f"|X[k]|={magnitudes[k]:.4f}, "
+            f"fase={phases[k]:.4f} rad"
+        )
