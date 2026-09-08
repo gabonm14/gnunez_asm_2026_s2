@@ -69,9 +69,9 @@ def calculate_spectrum(signal):
 
     # La fase de componentes prácticamente inexistentes
     # no tiene significado físico útil.
-    threshold = 1e-6
 
-    phase[magnitude < threshold] = np.nan
+    phase_threshold = 0.01 * np.max(magnitude)
+
 
     return frequencies, magnitude, phase
 
@@ -144,10 +144,29 @@ def save_signal_plot(signal, frequencies, magnitude, phase, name, title):
 
     plt.figure()
 
-    plt.plot(
-        frequencies,
-        phase
-    )
+    # Solo se muestra fase en componentes con magnitud
+    # suficientemente significativa.
+    phase_threshold = 0.01 * np.max(magnitude)
+
+    valid_phase = magnitude > phase_threshold
+
+    frequencies_phase = frequencies[valid_phase]
+    phase_values = phase[valid_phase]
+
+    if name == "chirp":
+
+        plt.scatter(
+            frequencies_phase,
+            phase_values,
+            s=10
+        )
+
+    else:
+
+        plt.scatter(
+            frequencies_phase,
+            phase_values
+        )
 
     plt.xlabel("Frecuencia [Hz]")
     plt.ylabel("Fase [rad]")
