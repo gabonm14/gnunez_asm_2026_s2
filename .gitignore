@@ -1,0 +1,62 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# Archivos de prueba / cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# =========================
+# Visual Studio Code
+# =========================
+.vscode/
+
+# =========================
+# Sistema operativo
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# LaTeX
+# =========================
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# No ignorar PDFs finales
+# *.pdf
+
+# =========================
+# Datos temporales
+# =========================
+*.tmp
+*.temp
+
+# =========================
+# Resultados generados
+# =========================
+# No se ignoran las figuras del proyecto porque
+# algunas serán evidencia para la documentación.
