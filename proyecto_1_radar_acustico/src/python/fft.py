@@ -68,6 +68,48 @@ def fft(signal):
     return spectrum
 
 
+
+def ifft(spectrum):
+    """
+    Calcula la Transformada Inversa Rápida de Fourier (IFFT)
+    utilizando la FFT implementada en el proyecto.
+
+    Se utiliza la propiedad:
+
+        IFFT(X) = conjugado(FFT(conjugado(X))) / N
+
+    Parámetros
+    ----------
+    spectrum : iterable
+        Coeficientes complejos en el dominio de frecuencia.
+
+    Retorna
+    -------
+    list[complex]
+        Señal reconstruida en el dominio temporal.
+    """
+
+    X = list(spectrum)
+    N = len(X)
+
+    if N == 0:
+        return []
+
+    conjugated = [
+        value.conjugate()
+        for value in X
+    ]
+
+    transformed = fft(conjugated)
+
+    result = [
+        value.conjugate() / N
+        for value in transformed
+    ]
+
+    return result
+
+
 if __name__ == "__main__":
 
     signal = [1, 0, -1, 0]

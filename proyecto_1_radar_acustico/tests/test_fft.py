@@ -8,13 +8,14 @@ from pathlib import Path
 import numpy as np
 
 
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 SRC_PATH = PROJECT_ROOT / "src" / "python"
 
 sys.path.insert(0, str(SRC_PATH))
 
 
-from fft import fft
+from fft import fft, ifft
 
 
 def test_fft_against_numpy():
@@ -62,10 +63,39 @@ def test_invalid_length():
     )
 
 
+def test_ifft_recovers_signal():
+    """
+    Comprueba que aplicar FFT seguida de IFFT
+    reconstruye la señal original.
+    """
+
+    signal = np.array([
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        4.0,
+        3.0,
+        2.0,
+        1.0
+    ])
+
+    spectrum = fft(signal)
+
+    reconstructed = np.array(
+        ifft(spectrum)
+    )
+
+    assert np.allclose(
+        reconstructed.real,
+        signal
+    )
+
 if __name__ == "__main__":
 
     test_fft_against_numpy()
     test_fft_larger_signal()
     test_invalid_length()
+    test_ifft_recovers_signal()
 
     print("Todas las pruebas de FFT fueron superadas.")
