@@ -1,0 +1,13 @@
+{
+  "fs_hz": 16000,
+  "n_bloque": 1024,
+  "delta_f_hz": 15.625,
+  "duracion_bloque_ms": 64.0,
+  "tono_en_bin_hz": 1000.0,
+  "tono_entre_bins_hz": 1007.8125,
+  "n_dft_directa": 64,
+  "error_dft_fft_max": 1.233545216066606e-13,
+  "error_simetria_max": 9.407157267697214e-15,
+  "imag_ifft_sin_simetria_max": 0.49999999999999994,
+  "imag_ifft_con_simetria_max": 2.171775911250605e-17
+}

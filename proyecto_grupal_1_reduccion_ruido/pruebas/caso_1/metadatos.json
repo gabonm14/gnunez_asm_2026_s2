@@ -1,0 +1,36 @@
+{
+  "fs_hz": 16000,
+  "duracion_s": 6.0,
+  "n_bloque": 1024,
+  "pico_maximo": 0.8,
+  "fade_ms": 20,
+  "frecuencias_utiles_hz": [
+    440,
+    880,
+    1320
+  ],
+  "amplitudes_utiles": [
+    1.0,
+    0.55,
+    0.3
+  ],
+  "fases_utiles_grados": [
+    0,
+    35,
+    -50
+  ],
+  "id": "caso_1",
+  "semilla": 20261011,
+  "tipo_ruido": "tonal",
+  "frecuencia_interferencia_hz": 2500,
+  "snr_objetivo_db": 2.0,
+  "n_muestras": 96000,
+  "duracion_real_s": 6.0,
+  "duracion_bloque_s": 0.064,
+  "separacion_bins_hz": 15.625,
+  "ganancia_comun": 0.3349256650452927,
+  "snr_obtenida_db": 2.000000000000001,
+  "formato_referencia": "float64 en muestras.npz",
+  "formato_wav": "PCM16 mono; cuantización independiente de cada señal",
+  "snr_wav_db": 2.0000240463618657
+}
