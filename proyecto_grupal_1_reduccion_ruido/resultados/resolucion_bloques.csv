@@ -1,0 +1,5 @@
+n_bloque,delta_f_hz,adquisicion_bloque_ms,un_buffer_float32_bytes
+256,62.5,16.0,1024
+512,31.25,32.0,2048
+1024,15.625,64.0,4096
+2048,7.8125,128.0,8192
