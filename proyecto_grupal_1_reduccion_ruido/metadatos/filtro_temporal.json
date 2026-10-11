@@ -1,0 +1,10 @@
+{
+  "fs_hz": 16000,
+  "paso_hz": 1500,
+  "rechazo_hz": 2300,
+  "rizado_max_db": 0.1,
+  "atenuacion_min_db": 60,
+  "margen_kaiser_db": 5,
+  "tolerancia_atol": 1e-12,
+  "tolerancia_rtol": 1e-10
+}
