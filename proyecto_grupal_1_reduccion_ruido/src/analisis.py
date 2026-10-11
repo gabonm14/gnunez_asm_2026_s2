@@ -13,7 +13,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.signal import get_window
 
-from .generacion import RAIZ, generar_todos
+# Permite ejecutar desde VS Code o importar desde el notebook.
+if __package__ in (None, ""):
+    from generacion import RAIZ, generar_todos
+else:
+    from .generacion import RAIZ, generar_todos
 
 
 def guardar_csv(ruta, filas):
