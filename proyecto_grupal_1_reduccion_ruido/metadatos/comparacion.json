@@ -1,0 +1,10 @@
+{
+  "repeticiones_tiempo": 7,
+  "bloques_para_tiempo": 24,
+  "criterios_predefinidos": {
+    "mejora_min_casos_separados_db": 10,
+    "energia_util_min_casos_separados_pct": 95,
+    "mejora_min_caso_superpuesto_db": 2,
+    "energia_util_min_caso_superpuesto_pct": 90
+  }
+}
