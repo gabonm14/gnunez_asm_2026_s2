@@ -1,0 +1,75 @@
+{
+  "config_temporal": {
+    "fs_hz": 16000,
+    "paso_hz": 1500,
+    "rechazo_hz": 2300,
+    "rizado_max_db": 0.1,
+    "atenuacion_min_db": 60,
+    "margen_kaiser_db": 5,
+    "tolerancia_atol": 1e-12,
+    "tolerancia_rtol": 1e-10
+  },
+  "config_espectral": {
+    "fs_hz": 16000,
+    "n_bloque": 1024,
+    "salto": 512,
+    "fin_banda_util_hz": 1500,
+    "inicio_rechazo_hz": 2300,
+    "ganancia_fuera_banda": 0.001,
+    "mediana_bins": 31,
+    "suavizado_ruido": 0.8,
+    "alpha": 1.5,
+    "ganancia_minima": 0.05,
+    "alphas_experimento": [
+      0.5,
+      1.5,
+      4.0,
+      12.0
+    ],
+    "tolerancia_reconstruccion": 1e-12
+  },
+  "config_comparacion": {
+    "repeticiones_tiempo": 7,
+    "bloques_para_tiempo": 24,
+    "criterios_predefinidos": {
+      "mejora_min_casos_separados_db": 10,
+      "energia_util_min_casos_separados_pct": 95,
+      "mejora_min_caso_superpuesto_db": 2,
+      "energia_util_min_caso_superpuesto_pct": 90
+    }
+  },
+  "entorno_medicion": {
+    "python": "3.12.6 (tags/v3.12.6:a4a2d2b, Sep  6 2024, 20:11:23) [MSC v.1940 64 bit (AMD64)]",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "sistema": "Windows-10-10.0.19045-SP0",
+    "arquitectura": "AMD64",
+    "procesador": "AMD64 Family 25 Model 33 Stepping 0, AuthenticAMD"
+  },
+  "intervalos": {
+    "caso_1": {
+      "inicio": 1024,
+      "fin_exclusivo": 94936,
+      "fir_inicio": 1064,
+      "fir_fin_exclusivo": 94976
+    },
+    "caso_2": {
+      "inicio": 1024,
+      "fin_exclusivo": 94936,
+      "fir_inicio": 1064,
+      "fir_fin_exclusivo": 94976
+    },
+    "caso_3": {
+      "inicio": 1024,
+      "fin_exclusivo": 94936,
+      "fir_inicio": 1064,
+      "fir_fin_exclusivo": 94976
+    }
+  },
+  "nota_tiempo": "Mediana/P95 de tiempos amortizados por bloque en Python, con calentamiento. No mide latencia física ni firmware.",
+  "nota_baseline": "Tiempo y RAM de sin_filtrar se fijan en cero como costo adicional de filtrado; adquisición y reproducción quedan fuera.",
+  "nota_implementaciones": "FIR usa bucle de Python; FFT/IFFT usa biblioteca optimizada. Los tiempos no establecen superioridad intrínseca de los algoritmos ni anticipan tiempos de firmware.",
+  "nota_memoria": "Estimación base float32/complex64 del diseño embebido. Excluye scratch FFT, pila, comunicaciones y máscaras históricas offline.",
+  "nota_banda_ancha": "La frecuencia dominante es el máximo de un registro particular de ruido; su atenuación no representa toda la banda.",
+  "nota_criterios": "Objetivos propuestos para este banco de prueba, no requisitos impuestos por el profesor; no ajustarlos para ocultar fallos."
+}

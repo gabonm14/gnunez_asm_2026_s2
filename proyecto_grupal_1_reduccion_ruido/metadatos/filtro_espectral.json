@@ -1,0 +1,14 @@
+{
+  "fs_hz": 16000,
+  "n_bloque": 1024,
+  "salto": 512,
+  "fin_banda_util_hz": 1500,
+  "inicio_rechazo_hz": 2300,
+  "ganancia_fuera_banda": 0.001,
+  "mediana_bins": 31,
+  "suavizado_ruido": 0.8,
+  "alpha": 1.5,
+  "ganancia_minima": 0.05,
+  "alphas_experimento": [0.5, 1.5, 4.0, 12.0],
+  "tolerancia_reconstruccion": 1e-12
+}
