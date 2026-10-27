@@ -1,4 +1,4 @@
-"""Tres casos reproducibles, adaptados del generador proporcionado por el profesor.
+"""Casos reproducibles, adaptados del generador proporcionado por el profesor.
 
 Ejecutar desde la carpeta del proyecto: python -m src.generacion
 Los algoritmos de filtrado deberán recibir solo la señal contaminada.
@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy.io import wavfile
-from scipy.signal import butter, sosfiltfilt
+from scipy.signal import butter, resample_poly, sosfiltfilt
 
 RAIZ = Path(__file__).resolve().parents[1]
 
@@ -27,6 +27,25 @@ def snr_db(limpia, observada):
     if ps <= 0:
         raise ValueError('La referencia debe tener potencia positiva.')
     return float(10 * np.log10(ps / pe)) if pe > 0 else float('inf')
+
+
+def validar_senal(senal, config):
+    """Valida la señal útil de un caso; 'multitono' usa las frecuencias globales."""
+    tipo = senal['tipo']
+    fs, duracion = config['fs_hz'], config['duracion_s']
+    if tipo == 'multitono':
+        return
+    if tipo == 'tono':
+        if not 0 < senal['frecuencia_hz'] < fs / 2:
+            raise ValueError('La frecuencia del tono debe estar entre 0 y Nyquist.')
+    elif tipo == 'pulso':
+        if senal['duracion_s'] * fs < 1 or not 0 <= senal['inicio_s'] <= duracion - senal['duracion_s']:
+            raise ValueError('El pulso debe durar al menos una muestra y caber en el registro.')
+    elif tipo == 'audio':
+        if not (RAIZ / senal['archivo']).is_file():
+            raise ValueError(f"No existe el archivo de audio {senal['archivo']}.")
+    else:
+        raise ValueError(f'Tipo de señal no soportado: {tipo}.')
 
 
 def validar_configuracion(config):
@@ -64,8 +83,46 @@ def validar_configuracion(config):
             bajo, alto = caso['banda_ruido_hz']
             if not 0 < bajo < alto < fs / 2:
                 raise ValueError('Banda de ruido fuera del intervalo permitido.')
+        elif caso['tipo_ruido'] == 'impulsivo':
+            if caso['impulsos_por_s'] <= 0:
+                raise ValueError('La tasa de impulsos debe ser positiva.')
         else:
-            raise ValueError('Este avance admite ruido tonal o de banda limitada.')
+            raise ValueError(f"Tipo de ruido no soportado: {caso['tipo_ruido']}.")
+        validar_senal(caso.get('senal', {'tipo': 'multitono'}), config)
+
+
+def senal_limpia(config, caso, t):
+    """Señal útil del caso antes del fade; sin 'senal' se usa el multitono global.
+
+    La amplitud no se configura: la ganancia común final fija el pico.
+    """
+    senal = caso.get('senal', {'tipo': 'multitono'})
+    fs = config['fs_hz']
+    if senal['tipo'] == 'multitono':
+        return sum(a * np.sin(2 * np.pi * f * t + np.deg2rad(fase)) for f, a, fase in
+                   zip(config['frecuencias_utiles_hz'], config['amplitudes_utiles'],
+                       config['fases_utiles_grados']))
+    if senal['tipo'] == 'tono':
+        return np.sin(2 * np.pi * senal['frecuencia_hz'] * t)
+    if senal['tipo'] == 'pulso':
+        # Pulso rectangular: los flancos abruptos muestran la respuesta temporal del filtro.
+        return ((t >= senal['inicio_s']) & (t < senal['inicio_s'] + senal['duracion_s'])).astype(np.float64)
+    return cargar_audio(RAIZ / senal['archivo'], fs, len(t))
+
+
+def cargar_audio(ruta, fs, n_muestras):
+    """Lee un WAV, lo pasa a mono y a fs, y toma las primeras n_muestras."""
+    fs_archivo, x = wavfile.read(ruta)
+    x = x.astype(np.float64)
+    if x.ndim > 1:
+        x = x.mean(axis=1)
+    if fs_archivo != fs:
+        # resample_poly incluye el filtro antialiasing de la conversión.
+        divisor = np.gcd(fs, fs_archivo)
+        x = resample_poly(x, fs // divisor, fs_archivo // divisor)
+    if len(x) < n_muestras:
+        raise ValueError('El audio es más corto que la duración configurada.')
+    return x[:n_muestras]
 
 
 def generar_caso(config, caso):
@@ -77,10 +134,7 @@ def generar_caso(config, caso):
     fs = config['fs_hz']
     t = np.arange(int(fs * config['duracion_s']), dtype=np.float64) / fs
     rng = np.random.default_rng(caso['semilla'])
-    limpia = np.zeros_like(t)
-    for f, a, fase in zip(config['frecuencias_utiles_hz'],
-                          config['amplitudes_utiles'], config['fases_utiles_grados']):
-        limpia += a * np.sin(2 * np.pi * f * t + np.deg2rad(fase))
+    limpia = senal_limpia(config, caso, t)
     # Entrada/salida suave, igual al criterio del notebook del profesor.
     n_fade = min(int(fs * config['fade_ms'] / 1000), len(t) // 2)
     if n_fade > 0:
@@ -90,10 +144,15 @@ def generar_caso(config, caso):
     if caso['tipo_ruido'] == 'tonal':
         fase_ruido = rng.uniform(-np.pi, np.pi)
         ruido = np.sin(2 * np.pi * caso['frecuencia_interferencia_hz'] * t + fase_ruido)
-    else:
+    elif caso['tipo_ruido'] == 'banda':
         sos = butter(6, caso['banda_ruido_hz'], btype='bandpass', fs=fs, output='sos')
         # Solo genera ruido sintético offline; no es nuestro filtro causal.
         ruido = sosfiltfilt(sos, rng.standard_normal(len(t)))
+    else:
+        # Impulsivo: muestras aisladas de signo aleatorio en posiciones aleatorias.
+        n = max(1, int(round(caso['impulsos_por_s'] * config['duracion_s'])))
+        ruido = np.zeros_like(t)
+        ruido[rng.choice(len(t), size=n, replace=False)] = rng.choice([-1.0, 1.0], size=n)
     ps, pn = potencia(limpia), potencia(ruido)
     if min(ps, pn) <= 0:
         raise ValueError('Señal o ruido con potencia nula.')

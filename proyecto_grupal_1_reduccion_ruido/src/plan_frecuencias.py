@@ -53,6 +53,9 @@ def componentes(config):
     filas = [{'origen': 'util', 'tipo': 'util', 'f_min_hz': f, 'f_max_hz': f}
              for f in config['frecuencias_utiles_hz']]
     for caso in config['casos']:
+        # Solo casos con el multitono global: las distancias se miden a esos tonos útiles.
+        if 'senal' in caso:
+            continue
         if caso['tipo_ruido'] == 'tonal':
             f = caso['frecuencia_interferencia_hz']
             filas.append({'origen': caso['id'], 'tipo': 'interferencia_tonal', 'f_min_hz': f, 'f_max_hz': f})
@@ -261,6 +264,7 @@ def ejecutar_plan():
     tabla = tabla_componentes(config, d_min)
     avisos = verificar_plan(config, plan, tabla)
     resultados = RAIZ / 'resultados'
+    (resultados / 'figuras').mkdir(parents=True, exist_ok=True)
     filas = barrido_separacion(cfg)
     candidatos = []
     for n in plan['n_candidatos']:

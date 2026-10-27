@@ -32,7 +32,7 @@
   "duracion_bloque_s": 0.064,
   "separacion_bins_hz": 15.625,
   "ganancia_comun": 0.19715394892054525,
-  "snr_obtenida_db": 1.9999999999999984,
+  "snr_obtenida_db": 1.9999999999999991,
   "formato_referencia": "float64 en muestras.npz",
   "formato_wav": "PCM16 mono; cuantización independiente de cada señal",
   "snr_wav_db": 2.0000109178701604
