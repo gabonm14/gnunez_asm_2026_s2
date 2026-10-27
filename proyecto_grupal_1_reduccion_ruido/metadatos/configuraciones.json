@@ -46,6 +46,40 @@
         1800
       ],
       "snr_objetivo_db": 2.0
+    },
+    {
+      "id": "caso_5",
+      "semilla": 20261015,
+      "senal": {
+        "tipo": "audio",
+        "archivo": "audio/3.wav"
+      },
+      "tipo_ruido": "banda",
+      "banda_ruido_hz": [2000, 7500],
+      "snr_objetivo_db": 2.0
+    },
+    {
+      "id": "caso_6",
+      "semilla": 20261016,
+      "senal": {
+        "tipo": "pulso",
+        "inicio_s": 3.0,
+        "duracion_s": 0.05
+      },
+      "tipo_ruido": "impulsivo",
+      "impulsos_por_s": 4,
+      "snr_objetivo_db": 2.0
+    },
+    {
+      "id": "caso_7",
+      "semilla": 20261017,
+      "senal": {
+        "tipo": "tono",
+        "frecuencia_hz": 440
+      },
+      "tipo_ruido": "tonal",
+      "frecuencia_interferencia_hz": 2508,
+      "snr_objetivo_db": 2.0
     }
   ]
 }
