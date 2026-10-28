@@ -1,0 +1,45 @@
+{
+  "mcu": "ESP32 (LEDC)",
+  "reloj_ledc_hz": 80000000,
+  "bits_pwm": 8,
+  "osr_pwm": 16,
+  "sub_muestras": 8,
+  "vdd_v": 3.3,
+  "orden_rc": 2,
+  "R1_ohm": 1000,
+  "C1_nf": 10,
+  "R2_ohm": 1000,
+  "C2_nf": 10,
+  "bloque_simulacion_muestras": 2048,
+  "tolerancia_sqnr_db": 3.0,
+  "fs_hz": 16000,
+  "f_pwm_objetivo_hz": 256000,
+  "divisor_ideal": 1.220703125,
+  "divisor_ledc": 1.21875,
+  "f_pwm_real_hz": 256410.2564102564,
+  "desajuste_pct": 0.1602564102564097,
+  "f_pwm_max_hz": 312500.0,
+  "H_s_den": [
+    1e-10,
+    3.0000000000000004e-05,
+    1.0
+  ],
+  "polos_s_rad_por_s": [
+    -261803.39887498957,
+    -38196.60112501051
+  ],
+  "frecuencia_3db_hz": 5942.345911170387,
+  "rizado_portadora_pp_max_mv": 15.248397255616553,
+  "duty_peor_caso": 0.5,
+  "rizado_portadora_pp_max_dbfs": -46.70579484143819,
+  "ganancia_rc_db": {
+    "paso_hz": -0.26229768912827256,
+    "rechazo_hz": -0.5942130247360242,
+    "nyquist_hz": -4.521654920938617,
+    "portadora_pwm_hz": -48.372796382412496
+  },
+  "retardo_grupo_dc_us": 30.000000000000004,
+  "retardo_grupo_dc_muestras": 0.4800000000000001,
+  "sqnr_teorica_escala_completa_db": 49.919999999999995,
+  "nota": "El RC sin buffer se carga a s\u00ed mismo; la impedancia de salida del GPIO y la carga del ADC del nodo 1 no est\u00e1n modeladas y deben medirse."
+}
