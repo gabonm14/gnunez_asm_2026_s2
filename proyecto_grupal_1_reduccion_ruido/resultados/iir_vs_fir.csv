@@ -1,0 +1,4 @@
+filtro,orden,multiplicaciones_por_muestra,sumas_por_muestra,ram_coef_estado_float32_bytes,retardo_grupo_muestras,fase,rizado_pico_a_pico_db,atenuacion_rechazo_min_db
+FIR orden 80,80,81,80,644,40,lineal,0.009692236202846698,64.71194917215401
+Butterworth orden 19,19,50,40,280,21.383732181647012,no lineal (retardo 18.1 a 34.2),0.098000000000047,61.044333311137024
+Chebyshev tipo I orden 10,10,25,20,140,18.33695440370165,no lineal (retardo 13.6 a 51.0),0.09799999751846573,68.43073310770662
