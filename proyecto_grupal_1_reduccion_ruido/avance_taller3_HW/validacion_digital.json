@@ -1,0 +1,38 @@
+{
+  "tipo": "Verificacion digital; NO medicion fisica ni compilacion",
+  "fs_hz": 16000,
+  "longitud_tabla": 4000,
+  "ram_tablas_bytes": 36000,
+  "rango_codigos": [
+    25,
+    230
+  ],
+  "tonos_verificados": [
+    {
+      "modo": 1,
+      "frecuencia_fft_hz": 440.0
+    },
+    {
+      "modo": 2,
+      "frecuencia_fft_hz": 880.0
+    },
+    {
+      "modo": 3,
+      "frecuencia_fft_hz": 1320.0
+    },
+    {
+      "modo": 5,
+      "frecuencia_fft_hz": 2500.0
+    },
+    {
+      "modo": 6,
+      "frecuencia_fft_hz": 2508.0
+    },
+    {
+      "modo": 7,
+      "frecuencia_fft_hz": 3100.0
+    }
+  ],
+  "snr_mezcla_antes_cuantizacion_db": 2.0000000000000004,
+  "nota": "N FFT receptor sigue siendo 1024; TABLE_N es solo el periodo de sintesis."
+}
