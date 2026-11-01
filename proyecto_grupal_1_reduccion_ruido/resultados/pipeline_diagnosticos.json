@@ -1,0 +1,313 @@
+{
+  "caso_1": {
+    "tipo": "tonal",
+    "tipos": [
+      "tonal"
+    ],
+    "frecuencias_interferentes_hz": [
+      2500.0000728165774
+    ],
+    "banda_ruido_hz": null,
+    "frecuencia_red_hz": null,
+    "fin_banda_util_hz": 1443.75,
+    "bloque_util_hz": [
+      406.25,
+      1343.75
+    ],
+    "solapamiento": false,
+    "senal_banda_ancha": false,
+    "confianza": "alta",
+    "motivo": "bloque \u00fatil separado del ruido por un hueco espectral",
+    "snr_estimada_db": 2.0201930197491564,
+    "curtosis_diferencia": -1.2203526030570329,
+    "impulsos_por_s_estimados": null,
+    "regiones": [
+      {
+        "f_lo_hz": 406.25,
+        "f_hi_hz": 468.75,
+        "f_pico_hz": 440.18381501758546,
+        "ancho_hz": 78.125,
+        "nivel_db": 38.535752435613766,
+        "potencia": 11083.05253779895,
+        "tipo": "linea"
+      },
+      {
+        "f_lo_hz": 843.75,
+        "f_hi_hz": 906.25,
+        "f_pico_hz": 880.2449622650311,
+        "ancho_hz": 78.125,
+        "nivel_db": 32.86417922623011,
+        "potencia": 3316.3340746414733,
+        "tipo": "linea"
+      },
+      {
+        "f_lo_hz": 1296.875,
+        "f_hi_hz": 1343.75,
+        "f_pico_hz": 1320.0498155026705,
+        "ancho_hz": 62.5,
+        "nivel_db": 26.76532044682997,
+        "potencia": 962.7961043187139,
+        "tipo": "linea"
+      },
+      {
+        "f_lo_hz": 2484.375,
+        "f_hi_hz": 2515.625,
+        "f_pico_hz": 2500.0000728165774,
+        "ancho_hz": 46.875,
+        "nivel_db": 38.08341256486768,
+        "potencia": 9647.918459018874,
+        "tipo": "linea"
+      }
+    ],
+    "interferencias": [
+      {
+        "f_lo_hz": 2484.375,
+        "f_hi_hz": 2515.625,
+        "f_pico_hz": 2500.0000728165774,
+        "ancho_hz": 46.875,
+        "nivel_db": 38.08341256486768,
+        "potencia": 9647.918459018874,
+        "tipo": "linea"
+      }
+    ],
+    "tiempo_calculo_ms": 1.3357000007090392
+  },
+  "caso_2": {
+    "tipo": "banda",
+    "tipos": [
+      "banda"
+    ],
+    "frecuencias_interferentes_hz": [],
+    "banda_ruido_hz": [
+      2375.0,
+      3953.125
+    ],
+    "frecuencia_red_hz": null,
+    "fin_banda_util_hz": 1443.75,
+    "bloque_util_hz": [
+      406.25,
+      1343.75
+    ],
+    "solapamiento": false,
+    "senal_banda_ancha": false,
+    "confianza": "alta",
+    "motivo": "bloque \u00fatil separado del ruido por un hueco espectral",
+    "snr_estimada_db": 2.022084258795248,
+    "curtosis_diferencia": -0.06775378466682724,
+    "impulsos_por_s_estimados": null,
+    "regiones": [
+      {
+        "f_lo_hz": 406.25,
+        "f_hi_hz": 468.75,
+        "f_pico_hz": 440.18375041987946,
+        "ancho_hz": 78.125,
+        "nivel_db": 33.94168530939447,
+        "potencia": 3848.185504721059,
+        "tipo": "linea"
+      },
+      {
+        "f_lo_hz": 843.75,
+        "f_hi_hz": 906.25,
+        "f_pico_hz": 880.2445928491996,
+        "ancho_hz": 78.125,
+        "nivel_db": 28.257535339007838,
+        "potencia": 1148.1349572211088,
+        "tipo": "linea"
+      },
+      {
+        "f_lo_hz": 1296.875,
+        "f_hi_hz": 1343.75,
+        "f_pico_hz": 1320.049086408098,
+        "ancho_hz": 62.5,
+        "nivel_db": 22.18419561906144,
+        "potencia": 335.2783928765639,
+        "tipo": "linea"
+      },
+      {
+        "f_lo_hz": 2375.0,
+        "f_hi_hz": 3953.125,
+        "f_pico_hz": 2840.2729804521423,
+        "ancho_hz": 1593.75,
+        "nivel_db": 17.931919358012205,
+        "potencia": 3346.9485791595735,
+        "tipo": "banda"
+      }
+    ],
+    "interferencias": [
+      {
+        "f_lo_hz": 2375.0,
+        "f_hi_hz": 3953.125,
+        "f_pico_hz": 2840.2729804521423,
+        "ancho_hz": 1593.75,
+        "nivel_db": 17.931919358012205,
+        "potencia": 3346.9485791595735,
+        "tipo": "banda"
+      }
+    ],
+    "tiempo_calculo_ms": 1.5376999999716645
+  },
+  "caso_3": {
+    "tipo": "banda",
+    "tipos": [
+      "banda"
+    ],
+    "frecuencias_interferentes_hz": [],
+    "banda_ruido_hz": [
+      843.75,
+      1921.875
+    ],
+    "frecuencia_red_hz": null,
+    "fin_banda_util_hz": null,
+    "bloque_util_hz": [
+      406.25,
+      1921.875
+    ],
+    "solapamiento": true,
+    "senal_banda_ancha": false,
+    "confianza": "baja",
+    "motivo": "ruido de banda superpuesto a la se\u00f1al \u00fatil",
+    "snr_estimada_db": null,
+    "curtosis_diferencia": -0.11436308720753763,
+    "impulsos_por_s_estimados": null,
+    "regiones": [
+      {
+        "f_lo_hz": 406.25,
+        "f_hi_hz": 468.75,
+        "f_pico_hz": 440.18363042372465,
+        "ancho_hz": 78.125,
+        "nivel_db": 34.19384394255236,
+        "potencia": 4078.2497459296596,
+        "tipo": "linea"
+      },
+      {
+        "f_lo_hz": 843.75,
+        "f_hi_hz": 1921.875,
+        "f_pico_hz": 880.2538926296481,
+        "ancho_hz": 1093.75,
+        "nivel_db": 28.506113014005944,
+        "potencia": 5075.779884208069,
+        "tipo": "banda"
+      }
+    ],
+    "interferencias": [],
+    "tiempo_calculo_ms": 1.4490000012301607
+  },
+  "caso_5": {
+    "tipo": "indeterminado",
+    "tipos": [],
+    "frecuencias_interferentes_hz": [],
+    "banda_ruido_hz": null,
+    "frecuencia_red_hz": null,
+    "fin_banda_util_hz": null,
+    "bloque_util_hz": [
+      31.25,
+      7578.125
+    ],
+    "solapamiento": false,
+    "senal_banda_ancha": true,
+    "confianza": "baja",
+    "motivo": "se\u00f1al de banda ancha desde DC: no se distingue del ruido de banda",
+    "snr_estimada_db": null,
+    "curtosis_diferencia": 0.0034452766011141556,
+    "impulsos_por_s_estimados": null,
+    "regiones": [
+      {
+        "f_lo_hz": 31.25,
+        "f_hi_hz": 7578.125,
+        "f_pico_hz": 267.5536320170656,
+        "ancho_hz": 7562.5,
+        "nivel_db": 24.55174437053141,
+        "potencia": 2786.8669411329493,
+        "tipo": "banda"
+      }
+    ],
+    "interferencias": [],
+    "tiempo_calculo_ms": 11.424500000430271
+  },
+  "caso_6": {
+    "tipo": "impulsivo",
+    "tipos": [
+      "impulsivo"
+    ],
+    "frecuencias_interferentes_hz": [],
+    "banda_ruido_hz": null,
+    "frecuencia_red_hz": null,
+    "fin_banda_util_hz": null,
+    "bloque_util_hz": null,
+    "solapamiento": false,
+    "senal_banda_ancha": false,
+    "confianza": "baja",
+    "motivo": "ruido impulsivo: espectro plano, la banda \u00fatil no es observable",
+    "snr_estimada_db": null,
+    "curtosis_diferencia": 1330.245019989642,
+    "impulsos_por_s_estimados": 7.0,
+    "regiones": [
+      {
+        "f_lo_hz": 31.25,
+        "f_hi_hz": 8000.0,
+        "f_pico_hz": 8000.0,
+        "ancho_hz": 7984.375,
+        "nivel_db": -9.473468730787141,
+        "potencia": 57.53769207847681,
+        "tipo": "banda"
+      }
+    ],
+    "interferencias": [],
+    "tiempo_calculo_ms": 1.4155000008031493
+  },
+  "caso_7": {
+    "tipo": "tonal",
+    "tipos": [
+      "tonal"
+    ],
+    "frecuencias_interferentes_hz": [
+      2507.9691181455396
+    ],
+    "banda_ruido_hz": null,
+    "frecuencia_red_hz": null,
+    "fin_banda_util_hz": 568.75,
+    "bloque_util_hz": [
+      406.25,
+      468.75
+    ],
+    "solapamiento": false,
+    "senal_banda_ancha": false,
+    "confianza": "alta",
+    "motivo": "bloque \u00fatil separado del ruido por un hueco espectral",
+    "snr_estimada_db": 2.0317152771469633,
+    "curtosis_diferencia": -1.3574274400425577,
+    "impulsos_por_s_estimados": null,
+    "regiones": [
+      {
+        "f_lo_hz": 406.25,
+        "f_hi_hz": 468.75,
+        "f_pico_hz": 440.18395255063916,
+        "ancho_hz": 78.125,
+        "nivel_db": 41.020271019114254,
+        "potencia": 19638.766156492835,
+        "tipo": "linea"
+      },
+      {
+        "f_lo_hz": 2468.75,
+        "f_hi_hz": 2546.875,
+        "f_pico_hz": 2507.9691181455396,
+        "ancho_hz": 93.75,
+        "nivel_db": 37.78400334135265,
+        "potencia": 12301.063805949143,
+        "tipo": "linea"
+      }
+    ],
+    "interferencias": [
+      {
+        "f_lo_hz": 2468.75,
+        "f_hi_hz": 2546.875,
+        "f_pico_hz": 2507.9691181455396,
+        "ancho_hz": 93.75,
+        "nivel_db": 37.78400334135265,
+        "potencia": 12301.063805949143,
+        "tipo": "linea"
+      }
+    ],
+    "tiempo_calculo_ms": 2.571400000306312
+  }
+}

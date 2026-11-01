@@ -1,0 +1,3 @@
+escenario,tipo_detectado,confianza,fin_banda_util_estimado_hz,mejora_snr_base_db,mejora_snr_diagnostico_db
+utiles_altos_tono,tonal,alta,3318.75,-1.1182018641389484,58.76446600103128
+utiles_bajos_banda,banda,alta,1115.625,47.03055709621558,63.063140413177216

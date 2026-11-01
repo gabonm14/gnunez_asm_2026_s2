@@ -1,0 +1,7 @@
+caso,tipo_real,tipo_detectado,confianza,motivo,frecuencia_real_hz,frecuencia_estimada_hz,banda_real_hz,banda_estimada_hz,fin_banda_util_estimado_hz,snr_real_db,snr_estimada_db,impulsos_real_por_s,impulsos_estimados_por_s,usa_diagnostico,mejora_snr_base_db,mejora_snr_diagnostico_db,tiempo_diagnostico_ms
+caso_1,tonal,tonal,alta,bloque útil separado del ruido por un hueco espectral,2500,2499.999999986821,,,1443.75,2.000000000000001,2.0169208444384434,,,1,59.34327778897721,59.34327737001933,5.521999999473337
+caso_2,banda,banda,alta,bloque útil separado del ruido por un hueco espectral,,,"[2500, 3800]","[2375, 3953]",1443.75,2.0000000000000013,2.019537555870892,,,1,63.72903596284897,63.74009621778902,8.326999999553664
+caso_3,banda,banda,baja,ruido de banda superpuesto a la señal útil,,,"[1000, 1800]","[844, 1922]",,2.0000000000000013,,,,0,4.496951022124028,,5.904899999222835
+caso_5,banda,indeterminado,baja,señal de banda ancha desde DC: no se distingue del ruido de banda,,,"[2000, 7500]",,,1.9999999999999984,,,,0,15.289307762009159,,6.738000000041211
+caso_6,impulsivo,impulsivo,baja,"ruido impulsivo: espectro plano, la banda útil no es observable",,,,,,1.9999999999999991,,4,4.333333333333333,0,9.304476327743112,,5.541099999391008
+caso_7,tonal,tonal,alta,bloque útil separado del ruido por un hueco espectral,2508,2507.969055670001,,,568.75,2.000000000000001,2.017827174444793,,,1,59.92724565933622,59.9272459251958,4.935800001476309

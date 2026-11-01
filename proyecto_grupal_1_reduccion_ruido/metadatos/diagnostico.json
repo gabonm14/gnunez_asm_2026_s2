@@ -1,0 +1,31 @@
+{
+  "umbral_ocupacion_db": 40,
+  "hueco_fusion_bins": 3,
+  "ancho_linea_hz": 100,
+  "ancho_dc_hz": 100,
+  "hueco_util_hz": 1000,
+  "margen_banda_util_hz": 100,
+  "umbral_curtosis": 20,
+  "k_atipicas_mad": 8,
+  "frecuencias_red_hz": [50, 60],
+  "armonicos_red_min": 3,
+  "max_armonico_red": 10,
+  "tolerancia_red_hz": 4,
+  "experimento": {
+    "duracion_s": 2.0,
+    "snr_db": [0, 5, 10],
+    "semillas": [20261201, 20261202, 20261203],
+    "frecuencias_tonales_hz": [1900, 2600, 3300, 4400, 6000],
+    "bandas_hz": [[2500, 3800], [3000, 5000]],
+    "impulsos_por_s": [4, 10],
+    "frecuencias_red_hz": [50, 60],
+    "escenarios_p6": [
+      {"nombre": "utiles_altos_tono", "frecuencias_utiles_hz": [1800, 2600, 3200],
+       "amplitudes_utiles": [1.0, 0.6, 0.4], "fases_utiles_grados": [0, 20, -30],
+       "tipo_ruido": "tonal", "frecuencia_interferencia_hz": 5200},
+      {"nombre": "utiles_bajos_banda", "frecuencias_utiles_hz": [250, 600, 1000],
+       "amplitudes_utiles": [1.0, 0.7, 0.5], "fases_utiles_grados": [0, 40, -10],
+       "tipo_ruido": "banda", "banda_ruido_hz": [2200, 3400]}
+    ]
+  }
+}
