@@ -1,0 +1,45 @@
+{
+  "origen": "host",
+  "tiempos": {
+    "n_bloque": 1024,
+    "dc_ventana": {
+      "n": 644,
+      "media_us": 0.8,
+      "max_us": 7,
+      "ultimo_us": 1
+    },
+    "fft": {
+      "n": 644,
+      "media_us": 19.6,
+      "max_us": 46,
+      "ultimo_us": 19
+    },
+    "psd": {
+      "n": 644,
+      "media_us": 0.3,
+      "max_us": 1,
+      "ultimo_us": 1
+    },
+    "impulsos": {
+      "n": 343,
+      "media_us": 15.3,
+      "max_us": 86,
+      "ultimo_us": 17
+    },
+    "diagnostico": {
+      "n": 21,
+      "media_us": 5.1,
+      "max_us": 10,
+      "ultimo_us": 4
+    },
+    "presupuesto_marco_us": 32000,
+    "carga_cpu_pct": 0.09,
+    "latencia_diagnostico_ms": 1000.0
+  },
+  "memoria": {
+    "n_bloque": 1024,
+    "bytes_buffers_dsp": 29193,
+    "bytes_estado_nodo1": 3840,
+    "bytes_estaticos_diagnostico": 5304
+  }
+}

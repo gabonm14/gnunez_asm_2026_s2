@@ -1,0 +1,49 @@
+{
+  "origen": "host",
+  "firmware_prueba_trama": {
+    "validas": 8,
+    "contenido_ok": 8,
+    "errores_crc": 1,
+    "perdidas": 2,
+    "bytes_descartados": 10,
+    "bytes_por_trama": 2136,
+    "armado_max_us": 6,
+    "cumple": true
+  },
+  "python_tramas_conocidas": {
+    "validas": 20,
+    "errores_crc": 0,
+    "perdidas": 0,
+    "bytes_descartados": 0,
+    "secuencia_consecutiva": true,
+    "muestras_ok": 20,
+    "cumple": true
+  },
+  "python_con_fallas": {
+    "validas": 18,
+    "errores_crc": 1,
+    "perdidas": 2,
+    "bytes_descartados": 2146,
+    "muestras_ok": 18,
+    "cumple": true
+  },
+  "bytes_por_trama": 2136,
+  "parametros_en_trama": {
+    "diag_numero": true,
+    "tipos": true,
+    "confianza": true,
+    "fin_banda_util_hz": true,
+    "lineas_hz": true,
+    "banda_ruido_hz": true,
+    "frecuencia_red_hz": true,
+    "snr_estimada_db": true,
+    "n_fft": true,
+    "muestras_del_diagnostico": true,
+    "fin_del_diagnostico": true,
+    "fin_banda_util_trama_hz": 1443.75,
+    "lineas_trama_hz": [
+      2500.0
+    ],
+    "cumple": true
+  }
+}
