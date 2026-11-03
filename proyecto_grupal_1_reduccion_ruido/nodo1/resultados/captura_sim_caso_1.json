@@ -1,0 +1,170 @@
+{
+  "capturas": [
+    {
+      "archivo": "nodo1/capturas/sim_caso_1.npz",
+      "nota": "simulacion caso_1 sin canal",
+      "bloques": 93,
+      "bloques_perdidos": 0,
+      "muestras_recortadas": 0,
+      "muestras_atrasadas": 0,
+      "duracion_s": 5.952,
+      "fs_marcas_tiempo_hz": 16000.0,
+      "fs_reloj_pc_hz": 16000.0,
+      "fs_firmware_hz": 16000.0,
+      "dc_codigo": 0.0,
+      "pico_codigos": 1500.0,
+      "rms_codigos": 668.22694421202,
+      "rms_dbfs": -9.728119380983083,
+      "diagnosticos": [
+        {
+          "diag": 1,
+          "tipos_python": [
+            "tonal"
+          ],
+          "tipos_nodo": [
+            "tonal"
+          ],
+          "confianza_python": "alta",
+          "confianza_nodo": "alta",
+          "fin_banda_util_python": 1443.75,
+          "fin_banda_util_nodo": 1443.75,
+          "lineas_python": [
+            2499.99999841294
+          ],
+          "lineas_nodo": [
+            2500.0
+          ],
+          "coincide": true
+        },
+        {
+          "diag": 2,
+          "tipos_python": [
+            "tonal"
+          ],
+          "tipos_nodo": [
+            "tonal"
+          ],
+          "confianza_python": "alta",
+          "confianza_nodo": "alta",
+          "fin_banda_util_python": 1443.75,
+          "fin_banda_util_nodo": 1443.75,
+          "lineas_python": [
+            2500.000008389478
+          ],
+          "lineas_nodo": [
+            2500.0
+          ],
+          "coincide": true
+        },
+        {
+          "diag": 3,
+          "tipos_python": [
+            "tonal"
+          ],
+          "tipos_nodo": [
+            "tonal"
+          ],
+          "confianza_python": "alta",
+          "confianza_nodo": "alta",
+          "fin_banda_util_python": 1443.75,
+          "fin_banda_util_nodo": 1443.75,
+          "lineas_python": [
+            2500.000008389478
+          ],
+          "lineas_nodo": [
+            2500.0
+          ],
+          "coincide": true
+        },
+        {
+          "diag": 4,
+          "tipos_python": [
+            "tonal"
+          ],
+          "tipos_nodo": [
+            "tonal"
+          ],
+          "confianza_python": "alta",
+          "confianza_nodo": "alta",
+          "fin_banda_util_python": 1443.75,
+          "fin_banda_util_nodo": 1443.75,
+          "lineas_python": [
+            2500.000008389478
+          ],
+          "lineas_nodo": [
+            2500.0
+          ],
+          "coincide": true
+        },
+        {
+          "diag": 5,
+          "tipos_python": [
+            "tonal"
+          ],
+          "tipos_nodo": [
+            "tonal"
+          ],
+          "confianza_python": "alta",
+          "confianza_nodo": "alta",
+          "fin_banda_util_python": 1443.75,
+          "fin_banda_util_nodo": 1443.75,
+          "lineas_python": [
+            2500.000008389478
+          ],
+          "lineas_nodo": [
+            2500.0
+          ],
+          "coincide": true
+        }
+      ],
+      "tonos": [
+        {
+          "tono_hz": 440.0,
+          "pico_hz": 440.1846668694116,
+          "error_hz": 0.1846668694116147,
+          "dentro_de_1_bin": true,
+          "nivel_db": -10.41288342482752,
+          "canal_relativo_db": 5.527412020445155e-05
+        },
+        {
+          "tono_hz": 880.0,
+          "pico_hz": 880.2461021037747,
+          "error_hz": 0.24610210377466046,
+          "dentro_de_1_bin": true,
+          "nivel_db": -16.038475724925117,
+          "canal_relativo_db": 0.0007800696557938025
+        },
+        {
+          "tono_hz": 1320.0,
+          "pico_hz": 1320.050199520982,
+          "error_hz": 0.0501995209820052,
+          "dentro_de_1_bin": true,
+          "nivel_db": -22.037022622173584,
+          "canal_relativo_db": -0.00046866872698014816
+        },
+        {
+          "tono_hz": 2500.0,
+          "pico_hz": 2500.0000010033505,
+          "error_hz": 1.0033504622697365e-06,
+          "dentro_de_1_bin": true,
+          "nivel_db": -10.847975606964111,
+          "canal_relativo_db": -5.527412020445155e-05
+        }
+      ],
+      "potencia_bandas_dbfs": {
+        "20-500 Hz": -8.507276619028932,
+        "500-2000 Hz": -12.568311767976805,
+        "2000-5000 Hz": -9.087062227248401,
+        "5000-8000 Hz": -76.73330214261202
+      },
+      "criterios": {
+        "sin_recorte": true,
+        "sin_bloques_perdidos": true,
+        "duracion_>=_10_s": false,
+        "picos_a_<=_1_bin": true,
+        "diagnostico_igual_a_python": true
+      }
+    }
+  ],
+  "repeticiones": {}
+}
