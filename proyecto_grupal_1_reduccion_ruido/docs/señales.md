@@ -41,7 +41,7 @@ Bandas de los filtros actuales, como referencia:
 | caso_2 | P2 | Multitono 440/880/1320 Hz | Banda de 2500–3800 Hz | 20261012 |
 | caso_3 | P5 | Multitono 440/880/1320 Hz | Banda de 1000–1800 Hz (superpuesta al tono de 1320) | 20261013 |
 | caso_5 | P3 | Audio `audio/3.wav` | Banda ancha de 2000–7500 Hz | 20261015 |
-| caso_6 | P4 | Pulso rectangular | Impulsivo | 20261016 |
+| caso_6 | P4 | Ráfagas de chirp 600–1400 Hz | Impulsivo | 20261016 |
 | caso_7 | P1 | Tono de 440 Hz | Tonal de 2508 Hz (fuera de bin) | 20261017 |
 
 ## Señales útiles
@@ -51,7 +51,7 @@ Bandas de los filtros actuales, como referencia:
 | Multitono | Suma de 3 sinusoides | 440, 880 y 1320 Hz; amplitudes 1.0, 0.55 y 0.3; fases 0°, 35° y −50° | 1, 2, 3 |
 | Tono | Una sinusoide | 440 Hz | 7 |
 | Audio | Archivo WAV que se pasa a mono (promediando canales), se convierte a 16 kHz y se recorta a los primeros 6 s | `audio/3.wav`: mono, 48 kHz, 8.9 s, sin saturación, 99.3 % de la energía por debajo de 1500 Hz | 5 |
-| Pulso | Rectangular, valor 1 dentro del pulso y 0 fuera; los flancos abruptos muestran la respuesta temporal del filtro | Inicio en t = 3 s, duración 50 ms | 6 |
+| Chirp | Ráfagas de barrido lineal con envolvente Tukey (25 %), repetidas; muestran si el filtro retrasa distinto cada frecuencia | 600 → 1400 Hz, 50 ms, una por segundo desde t = 1 s (5 ráfagas) | 6 |
 
 ## Ruidos
 
@@ -78,4 +78,5 @@ La interferencia del caso_7 se puso a 8 Hz de la del caso_1 para comparar direct
 ## Observaciones
 
 - **caso_5:** la banda ancha es ruido filtrado a 2000–7500 Hz, no ruido blanco en todo el espectro, para que quede separada del audio.
-- **caso_6:** para lograr 2 dB de SNR, los impulsos alcanzan el pico de 0.8 y el pulso útil queda en ≈ 0.17.
+- **caso_6:** para lograr 2 dB de SNR, los impulsos alcanzan el pico de 0.8 y el chirp queda en ≈ 0.12.
+- **caso_6, por qué chirp y no pulso rectangular:** el pulso rectangular es casi todo baja frecuencia; el acople, el PAM8403 y un parlante pequeño dejan pasar solo 0.5–1 % de su energía (modelo de canal pasa altos de 200–400 Hz y pasa bajos de 6 kHz, sin medir). El chirp de 600–1400 Hz pasa entre 97 y 99.8 % y queda dentro de la banda de paso de los filtros (0–1500 Hz). Los impulsos se dejaron de una muestra: pasan el canal (≈ 68 % de su energía) y, con impulsos más anchos, su espectro cae sobre el chirp y ningún método los separa (1 ms: mejora de 2 dB en lugar de 9).

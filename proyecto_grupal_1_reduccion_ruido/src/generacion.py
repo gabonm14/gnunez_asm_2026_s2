@@ -9,7 +9,8 @@ from pathlib import Path
 
 import numpy as np
 from scipy.io import wavfile
-from scipy.signal import butter, resample_poly, sosfiltfilt
+from scipy.signal import butter, chirp, resample_poly, sosfiltfilt
+from scipy.signal.windows import tukey
 
 RAIZ = Path(__file__).resolve().parents[1]
 
@@ -38,9 +39,13 @@ def validar_senal(senal, config):
     if tipo == 'tono':
         if not 0 < senal['frecuencia_hz'] < fs / 2:
             raise ValueError('La frecuencia del tono debe estar entre 0 y Nyquist.')
-    elif tipo == 'pulso':
-        if senal['duracion_s'] * fs < 1 or not 0 <= senal['inicio_s'] <= duracion - senal['duracion_s']:
-            raise ValueError('El pulso debe durar al menos una muestra y caber en el registro.')
+    elif tipo == 'chirp':
+        if not 0 < senal['f0_hz'] < fs / 2 or not 0 < senal['f1_hz'] < fs / 2:
+            raise ValueError('Las frecuencias del chirp deben estar entre 0 y Nyquist.')
+        if not (senal['duracion_s'] * fs >= 2 and senal['duracion_s'] < senal['periodo_s']):
+            raise ValueError('El chirp debe durar al menos dos muestras y menos que su periodo.')
+        if not 0 <= senal['inicio_s'] <= duracion - senal['duracion_s']:
+            raise ValueError('El primer chirp debe caber en el registro.')
     elif tipo == 'audio':
         if not (RAIZ / senal['archivo']).is_file():
             raise ValueError(f"No existe el archivo de audio {senal['archivo']}.")
@@ -104,10 +109,26 @@ def senal_limpia(config, caso, t):
                        config['fases_utiles_grados']))
     if senal['tipo'] == 'tono':
         return np.sin(2 * np.pi * senal['frecuencia_hz'] * t)
-    if senal['tipo'] == 'pulso':
-        # Pulso rectangular: los flancos abruptos muestran la respuesta temporal del filtro.
-        return ((t >= senal['inicio_s']) & (t < senal['inicio_s'] + senal['duracion_s'])).astype(np.float64)
+    if senal['tipo'] == 'chirp':
+        return rafagas_chirp(senal, fs, len(t))
     return cargar_audio(RAIZ / senal['archivo'], fs, len(t))
+
+
+def rafagas_chirp(senal, fs, n_muestras):
+    """Ráfagas de barrido lineal f0 → f1 con envolvente Tukey (25 %), repetidas cada periodo.
+
+    Pasan por el parlante (a diferencia de un pulso rectangular, casi todo baja frecuencia) y
+    muestran si el filtro retrasa distinto cada frecuencia. La envolvente suave evita clics
+    en los bordes, que se confundirían con el ruido impulsivo. emisor/generador.h calcula lo mismo.
+    """
+    m = int(round(senal['duracion_s'] * fs))
+    tt = np.arange(m) / fs
+    rafaga = chirp(tt, senal['f0_hz'], tt[-1], senal['f1_hz']) * tukey(m, 0.25)
+    x = np.zeros(n_muestras)
+    paso = int(round(senal['periodo_s'] * fs))
+    for i in range(int(round(senal['inicio_s'] * fs)), n_muestras - m + 1, paso):
+        x[i:i + m] = rafaga
+    return x
 
 
 def cargar_audio(ruta, fs, n_muestras):
