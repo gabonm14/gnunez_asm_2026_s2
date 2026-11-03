@@ -62,9 +62,12 @@
       "id": "caso_6",
       "semilla": 20261016,
       "senal": {
-        "tipo": "pulso",
-        "inicio_s": 3.0,
-        "duracion_s": 0.05
+        "tipo": "chirp",
+        "f0_hz": 600,
+        "f1_hz": 1400,
+        "duracion_s": 0.05,
+        "inicio_s": 1.0,
+        "periodo_s": 1.0
       },
       "tipo_ruido": "impulsivo",
       "impulsos_por_s": 4,
