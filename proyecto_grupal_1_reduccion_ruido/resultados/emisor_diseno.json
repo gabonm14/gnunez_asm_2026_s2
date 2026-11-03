@@ -33,8 +33,8 @@
   "duty_peor_caso": 0.5,
   "rizado_portadora_pp_max_dbfs": -46.70579484143819,
   "ganancia_rc_db": {
-    "paso_hz": -0.26229768912827256,
-    "rechazo_hz": -0.5942130247360242,
+    "paso_hz": -0.2622976891282725,
+    "rechazo_hz": -0.5942130247360241,
     "nyquist_hz": -4.521654920938617,
     "portadora_pwm_hz": -48.372796382412496
   },

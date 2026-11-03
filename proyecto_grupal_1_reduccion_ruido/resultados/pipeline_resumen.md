@@ -25,10 +25,10 @@ Referencia: la señal que entrega el emisor. Mejora separada = independiente del
 | caso_5 | espectral_fijo | 0.0001366 | 15.26 | 33.13 | 93.57 | 64.00 | no_cumple |
 | caso_5 | espectral_adaptativo | 0.0001366 | 15.26 | 33.13 | 93.57 | 64.00 | no_cumple |
 | caso_6 | sin_filtrar | 0.0001567 | 0.00 | 0.00 | 100.00 | 0.00 | referencia |
-| caso_6 | FIR | 3.572e-05 | 6.42 | 6.44 | 99.91 | 2.50 | no_cumple |
-| caso_6 | IIR | 3.273e-05 | 6.80 | 6.86 | 99.90 | 1.34 | no_cumple |
-| caso_6 | espectral_fijo | 1.856e-05 | 9.27 | 9.58 | 97.49 | 64.00 | no_cumple |
-| caso_6 | espectral_adaptativo | 1.856e-05 | 9.27 | 9.58 | 97.49 | 64.00 | no_cumple |
+| caso_6 | FIR | 3.565e-05 | 6.43 | 6.44 | 99.93 | 2.50 | no_cumple |
+| caso_6 | IIR | 5.118e-05 | 4.86 | 6.86 | 99.94 | 1.34 | no_cumple |
+| caso_6 | espectral_fijo | 2.14e-05 | 8.65 | 9.13 | 71.95 | 64.00 | no_cumple |
+| caso_6 | espectral_adaptativo | 2.14e-05 | 8.65 | 9.13 | 71.95 | 64.00 | no_cumple |
 | caso_7 | sin_filtrar | 0.06257 | 0.00 | 0.00 | 100.00 | 0.00 | referencia |
 | caso_7 | FIR | 3.167e-06 | 42.96 | 69.18 | 100.00 | 2.50 | cumple |
 | caso_7 | IIR | 0.0001966 | 25.03 | 71.01 | 100.00 | 1.34 | cumple |
