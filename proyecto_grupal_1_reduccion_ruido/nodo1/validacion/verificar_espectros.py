@@ -5,8 +5,11 @@ Cuatro capturas de capturar.py, misma prueba, distancia y ganancia, con el emiso
   --ruido   comp ruido          --mezcla  comp mezcla
 Cada captura incluye una vez el ruido de la sala, así que debe cumplirse, banda por banda,
     P_mezcla ≈ P_limpia + P_ruido − P_sala.
-Además: SNR real en el micrófono, peso de la sala, picos de la limpia y del ruido, y Parseval
-(potencia en el tiempo = potencia sumada en frecuencia, con la escala de la PSD usada aquí).
+Además: SNR real en el micrófono, peso de la sala, picos de la limpia y del ruido, bandas de la
+mezcla que no están en la limpia ni en el ruido (armónicos o intermodulación: la cadena no es
+lineal) y Parseval por bloque (energía en el tiempo = energía en frecuencia, con la misma ventana).
+El nivel de la mezcla debe quedar en el rango lineal del ADC (máx. 2450 mV, mín. 150 mV): por
+encima el ESP32 comprime la señal sin llegar a 4095, y eso no cuenta como recorte.
 Detalle en docs/nodo1_verificacion.md, "Método de verificación".
 
     python nodo1/validacion/verificar_espectros.py --sala nodo1/capturas/p1_sala.npz \\
@@ -29,7 +32,9 @@ from src.diagnostico import psd_promediada
 ANCHO_BANDA_HZ = 250
 F_MIN_HZ, F_MAX_HZ = 2 * DF, 7500   # sin DC ni el borde del anti-aliasing
 TOL_SUMA_DB = 1.0                   # el estimador de Welch de 10 s varía ≈ 0.1 dB por banda de 250 Hz
-TOL_PARSEVAL = 0.02
+TOL_PARSEVAL = 1e-6                 # identidad exacta salvo redondeo
+NUEVA_DB = 3                        # banda de la mezcla 3 dB sobre limpia + ruido − sala
+RANGO_MV = (150, 2450)              # rango lineal del ADC con atenuación de 12 dB
 SIGNIFICATIVA = 10                  # banda que sobresale 10 dB del piso de la sala
 
 
@@ -46,13 +51,17 @@ def bandas(P):
 
 
 def parseval(x):
-    """Potencia media en el tiempo frente a la suma de la PSD de Welch (Hann, 50 %)."""
+    """Σ (x·w)² = Σ|X|²/N en cada bloque de N con la ventana de Hann, sumado sobre los bloques.
+
+    Es la escala con que se suman las potencias por banda. (Comparar la potencia media de toda la
+    señal con la suma de la PSD de Welch no es exacto con señales que cambian en el tiempo, como
+    la canción o el chirp: Hann² con 50 % de solapamiento no pesa igual todas las muestras.)
+    """
     w = np.hanning(N + 1)[:-1]
-    P = psd_promediada(x, N)
-    dos_lados = P[0] + 2 * P[1:-1].sum() + P[-1]
-    frecuencia = dos_lados / (N * np.sum(w ** 2))
-    tiempo = np.mean((x - x.mean()) ** 2)
-    return float(tiempo), float(frecuencia), float(abs(frecuencia / tiempo - 1))
+    marcos = (x[:len(x) // N * N] - x.mean()).reshape(-1, N) * w
+    tiempo = float(np.sum(marcos ** 2))
+    frecuencia = float(np.sum(np.abs(np.fft.fft(marcos, axis=1)) ** 2) / N)
+    return tiempo, frecuencia, abs(frecuencia / tiempo - 1)
 
 
 def main():
@@ -74,12 +83,18 @@ def main():
     validas = esperado > SIGNIFICATIVA * piso
     desvio = 10 * np.log10(Bm[validas] / esperado[validas])
 
+    # Bandas con contenido en la mezcla que no viene de la limpia ni del ruido: no linealidad.
+    nuevas = (Bm > SIGNIFICATIVA * Bs) & (Bm > 10 ** (NUEVA_DB / 10) * np.maximum(esperado, Bs))
     util, ruido = np.clip(Bl - Bs, 0, None).sum(), np.clip(Br - Bs, 0, None).sum()
+    nivel = json.loads(str(cargar(args.mezcla)['estado_adc'])) or {}  # vacío en capturas simuladas
     r = {'archivos': {k: str(getattr(args, k)) for k in ('sala', 'limpia', 'ruido', 'mezcla')},
          'bandas_comparadas': int(validas.sum()), 'ancho_banda_hz': ANCHO_BANDA_HZ,
          'desvio_suma_max_db': float(np.max(np.abs(desvio))) if validas.any() else float('nan'),
          'desvio_suma_mediana_db': float(np.median(desvio)) if validas.any() else float('nan'),
-         'snr_microfono_db': float(10 * np.log10(util / ruido)) if util > 0 and ruido > 0 else float('nan')}
+         'snr_microfono_db': float(10 * np.log10(util / ruido)) if util > 0 and ruido > 0 else float('nan'),
+         'bandas_nuevas_hz': [[float(a), float(a + ANCHO_BANDA_HZ), float(10 * np.log10(Bm[i] / max(esperado[i], Bs[i])))]
+                              for i, a in enumerate(bordes) if nuevas[i]],
+         'mezcla_min_mv': nivel.get('min_mv'), 'mezcla_max_mv': nivel.get('max_mv')}
     if args.sala:
         r['sala_bajo_limpia_db'] = float(10 * np.log10(Bl.sum() / Bs.sum()))
         r['sala_bajo_ruido_db'] = float(10 * np.log10(Br.sum() / Bs.sum()))
@@ -90,18 +105,24 @@ def main():
     r['parseval'] = {'potencia_tiempo': t, 'potencia_frecuencia': fr, 'error_relativo': err}
     r['criterios'] = {f'mezcla_=_limpia_+_ruido_-_sala_(<=_{TOL_SUMA_DB}_dB)': bool(validas.any())
                       and r['desvio_suma_max_db'] <= TOL_SUMA_DB,
+                      'sin_bandas_nuevas_en_la_mezcla': not nuevas.any(),
+                      f'mezcla_en_rango_lineal_del_adc_({RANGO_MV[0]}-{RANGO_MV[1]}_mV)':
+                          not nivel or RANGO_MV[0] <= nivel['min_mv'] and nivel['max_mv'] <= RANGO_MV[1],
                       'picos_a_<=_1_bin': all(x['dentro_de_1_bin'] for x in r['tonos_limpia'] + r['tonos_ruido']),
-                      f'parseval_(<=_{TOL_PARSEVAL:.0%})': err <= TOL_PARSEVAL}
+                      'parseval_por_bloque': err <= TOL_PARSEVAL}
 
     print(f"Bandas de {ANCHO_BANDA_HZ} Hz comparadas: {r['bandas_comparadas']}; mezcla frente a limpia + ruido − sala: "
           f"máximo {r['desvio_suma_max_db']:.2f} dB, mediana {r['desvio_suma_mediana_db']:+.2f} dB")
     print(f"SNR real en el micrófono: {r['snr_microfono_db']:.2f} dB")
+    print(f"Mezcla en el ADC: {r['mezcla_min_mv']} a {r['mezcla_max_mv']} mV (lineal: {RANGO_MV[0]} a {RANGO_MV[1]})")
+    for a, b, d in r['bandas_nuevas_hz']:
+        print(f"   banda nueva en la mezcla: {a:.0f}-{b:.0f} Hz, {d:+.1f} dB sobre limpia + ruido")
     if args.sala:
         print(f"Sala: {r['sala_bajo_limpia_db']:.1f} dB bajo la limpia, {r['sala_bajo_ruido_db']:.1f} dB bajo el ruido")
     for nombre in ('tonos_limpia', 'tonos_ruido'):
         for x in r[nombre]:
             print(f"   {nombre}: {x['tono_hz']:.0f} Hz -> {x['pico_hz']:.1f} Hz (error {x['error_hz']:.2f} Hz)")
-    print(f"Parseval: tiempo {t:.1f}, frecuencia {fr:.1f} códigos², error {100 * err:.2f} %")
+    print(f"Parseval por bloque: error relativo {err:.1e}")
     print('Criterios: ' + ', '.join(f"{k} {'sí' if v else 'NO'}" for k, v in r['criterios'].items()))
 
     salida = NODO1 / 'resultados'
