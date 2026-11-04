@@ -16,14 +16,16 @@
 
 constexpr uint32_t RELOJ_TEMPORIZADOR = 2000000;  // 80 MHz / 40
 static_assert(RELOJ_TEMPORIZADOR % FS_HZ == 0, "fs debe dividir exactamente el reloj del temporizador");
-constexpr int PIN_SYNC = 27;                 // Pulso de 1 ms al inicio de cada ciclo de la señal.
-constexpr uint32_t MUESTRAS_SYNC = FS_HZ / 1000;
+// Pulso al inicio de cada ciclo de la señal útil. Su ancho dice qué componente se emite:
+// 1 ms mezcla, 2 ms limpia, 3 ms ruido. En silencio no hay pulsos. Lo lee el nodo 1.
+constexpr int PIN_SYNC = 27;
+constexpr uint32_t MUESTRAS_MS = FS_HZ / 1000;
 constexpr uint32_t TAM_BUFER = 4096;         // 256 ms; potencia de dos para el índice circular.
 constexpr uint32_t BLOQUE = 256;             // Muestras que calcula la tarea en cada vuelta.
 
 static DRAM_ATTR uint8_t bufer[TAM_BUFER];
 static volatile uint32_t lectura = 0, escritura = 0;   // contadores libres; índice = contador % TAM_BUFER
-static volatile uint32_t vaciados = 0, saturadas = 0, posicion = 0, periodoSync = 0;
+static volatile uint32_t vaciados = 0, saturadas = 0, posicion = 0, periodoSync = 0, muestrasSync = 0;
 static portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
 static Fuente fuenteNueva;                   // la escribe loop() y la toma la tarea, siempre bajo mux
 static volatile bool hayNueva = false;
@@ -40,7 +42,7 @@ void IRAM_ATTR alMuestrear() {
   if (lectura != escritura) {
     dac_ll_update_output_value(DAC_CHAN_0, bufer[lectura % TAM_BUFER]);
     lectura = lectura + 1;
-    gpio_ll_set_level(&GPIO, (gpio_num_t)PIN_SYNC, periodoSync && posicion < MUESTRAS_SYNC);
+    gpio_ll_set_level(&GPIO, (gpio_num_t)PIN_SYNC, periodoSync && posicion < muestrasSync);
     if (periodoSync) {
       const uint32_t p = posicion + 1;
       posicion = p >= periodoSync ? 0 : p;
@@ -50,6 +52,8 @@ void IRAM_ATTR alMuestrear() {
   }
   portEXIT_CRITICAL_ISR(&mux);
 }
+
+uint32_t anchoSyncMs(Componente c) { return c == Componente::Limpia ? 2 : c == Componente::Ruido ? 3 : 1; }
 
 uint8_t codigoDac(float x) {
   if (x > 1 || x < -1) {
@@ -78,7 +82,8 @@ void tareaProductora(void*) {
       for (uint32_t i = 0; i < BLOQUE; ++i) bufer[(lectura + i) % TAM_BUFER] = primero[i];
       escritura = lectura + BLOQUE;
       posicion = 0;
-      periodoSync = local.periodo;
+      periodoSync = local.cfg.activo ? local.periodo : 0;
+      muestrasSync = MUESTRAS_MS * anchoSyncMs(local.cfg.componente);
       vaciados = 0;
       portEXIT_CRITICAL(&mux);
       continue;
@@ -149,6 +154,8 @@ void mostrarEstado() {
     case TipoRuido::Impulsivo: Serial.printf(" | ruido impulsivo %.2f/s", cfg.tasa); break;
   }
   Serial.printf(" | semilla %lu\n", (unsigned long)cfg.semilla);
+  if (cfg.activo) Serial.printf("Sincronizacion GPIO%d: pulso de %lu ms cada %.3f s\n", PIN_SYNC,
+                                (unsigned long)anchoSyncMs(cfg.componente), activa.periodo / (float)FS_HZ);
   Serial.printf("fs nominal %lu Hz, medida %.1f Hz | saturadas %lu | vaciados %lu\n",
                 (unsigned long)FS_HZ, fsMedida, (unsigned long)saturadas, (unsigned long)vaciados);
 }

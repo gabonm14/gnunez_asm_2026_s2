@@ -6,8 +6,8 @@
     "errores_crc": 1,
     "perdidas": 2,
     "bytes_descartados": 10,
-    "bytes_por_trama": 2136,
-    "armado_max_us": 6,
+    "bytes_por_trama": 4192,
+    "armado_max_us": 10,
     "cumple": true
   },
   "python_tramas_conocidas": {
@@ -23,11 +23,11 @@
     "validas": 18,
     "errores_crc": 1,
     "perdidas": 2,
-    "bytes_descartados": 2146,
+    "bytes_descartados": 2154,
     "muestras_ok": 18,
     "cumple": true
   },
-  "bytes_por_trama": 2136,
+  "bytes_por_trama": 2144,
   "parametros_en_trama": {
     "diag_numero": true,
     "tipos": true,

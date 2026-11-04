@@ -45,7 +45,8 @@ class Conexion:
             self.proceso.stdin.flush()
 
     def linea(self):
-        texto = (self.serie.readline() if self.serie else self.proceso.stdout.readline()).decode('utf-8').strip()
+        # 'replace': con tramas_usb pueden quedar bytes binarios entre las líneas de texto.
+        texto = (self.serie.readline() if self.serie else self.proceso.stdout.readline()).decode('utf-8', 'replace').strip()
         if not texto and self.serie:
             raise TimeoutError('El nodo 1 no respondió.')
         return texto

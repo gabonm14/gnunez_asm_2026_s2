@@ -8,8 +8,8 @@
       "error_vs_numpy": 1.4994457680932593e-07,
       "error_vs_dft_directa": 1.4994457682571803e-07,
       "cumple": true,
-      "dc_ventana_us": 3,
-      "fft_us": 40
+      "dc_ventana_us": 0,
+      "fft_us": 11
     },
     {
       "N": 512,
@@ -17,8 +17,8 @@
       "error_vs_numpy": 5.16234633632993e-07,
       "error_vs_dft_directa": 5.162346336447873e-07,
       "cumple": true,
-      "dc_ventana_us": 3,
-      "fft_us": 1075
+      "dc_ventana_us": 1,
+      "fft_us": 20
     },
     {
       "N": 1024,
@@ -26,8 +26,8 @@
       "error_vs_numpy": 6.555391485666971e-07,
       "error_vs_dft_directa": 6.555391485934223e-07,
       "cumple": true,
-      "dc_ventana_us": 26,
-      "fft_us": 112
+      "dc_ventana_us": 4,
+      "fft_us": 39
     },
     {
       "N": 2048,
@@ -36,7 +36,7 @@
       "error_vs_dft_directa": 3.6930941960472226e-07,
       "cumple": true,
       "dc_ventana_us": 7,
-      "fft_us": 68
+      "fft_us": 77
     }
   ]
 }

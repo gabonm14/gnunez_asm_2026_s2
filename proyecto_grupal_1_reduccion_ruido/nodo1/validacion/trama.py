@@ -4,8 +4,8 @@ Todo en little-endian. El CRC-32 es zlib.crc32 sobre todo menos el delimitador y
 
     off  tam  campo
       0    2  delimitador A5 5A
-      2    1  versión (2)
-      3    1  longitud de cabecera (84)
+      2    1  versión (3)
+      3    1  longitud de cabecera (92)
       4    4  secuencia del bloque
       8    2  n_muestras (1024)
      10    2  estado (bits en ESTADOS)
@@ -28,7 +28,13 @@ Todo en little-endian. El CRC-32 es zlib.crc32 sobre todo menos el delimitador y
      72    4  marca de tiempo: esp_timer al cerrar el bloque (µs, módulo 2^32)
      76    4  índice absoluto (seq*1024 + i) donde cerró el último diagnóstico
      80    4  muestras que cubrió ese diagnóstico
-     84  2*n  muestras int16 con la DC quitada (unidades de código del ADC)
+     84    4  posición en el ciclo del emisor de la primera muestra (0xFFFFFFFF: sin pulso)
+     88    2  índice en el bloque donde empieza un ciclo (int16, −1 si ninguno)
+     90    1  componente que emite el emisor, por el ancho del pulso (COMPONENTES)
+     91    1  estado de la referencia (ESTADOS_REF)
+     92  2*n  muestras int16 con la DC quitada (unidades de código del ADC)
+    ...  2*n  solo con el bit "referencia" del estado: referencia limpia de esas muestras
+              (int16, mismas unidades; −32768 = sin referencia para esa muestra)
     ...    4  CRC-32
 """
 import struct
@@ -37,17 +43,30 @@ import zlib
 import numpy as np
 
 SYNC = b'\xa5\x5a'
-VERSION = 2
-CABECERA = 84
-FORMATO = struct.Struct('<2sBBIHHHHIfIBBBxf4f2fffHHIII')
-ESTADOS = ('recorte', 'atraso', 'perdida', 'diag_nuevo', 'fs_fuera', 'prueba')
+VERSION = 3
+CABECERA = 92
+FORMATO = struct.Struct('<2sBBIHHHHIfIBBBxf4f2fffHHIIIIhBB')
+ESTADOS = ('recorte', 'atraso', 'perdida', 'diag_nuevo', 'fs_fuera', 'prueba', 'referencia')
+COMPONENTES = ('ninguna', 'mezcla', 'limpia', 'ruido')
+ESTADOS_REF = ('vacia', 'esperando', 'capturando', 'lista')
+REF_SIN = -32768
+SIN_POSICION = 0xFFFFFFFF
 TIPOS = ('impulsivo', 'red_electrica', 'tonal', 'banda')
 assert FORMATO.size == CABECERA
 
 
 def patron(seq, n):
-    """Bloque conocido de las pruebas; igual a patron() del firmware."""
+    """Bloque conocido de las pruebas; igual a patron() del firmware.
+    Las tramas impares llevan además la referencia −patron."""
     return (((seq * 7 + np.arange(n) * 13) & 0xFFF) - 2048).astype(np.int16)
+
+
+def es_patron(t):
+    """La trama trae el patrón conocido y, si es impar, la referencia conocida."""
+    ok = np.array_equal(t['muestras'], patron(t['seq'], t['n_muestras']))
+    if t['seq'] % 2:
+        return ok and t['referencia'] is not None and np.array_equal(t['referencia'], -patron(t['seq'], t['n_muestras']))
+    return ok and t['referencia'] is None
 
 
 def interpretar(trama):
@@ -61,7 +80,10 @@ def interpretar(trama):
             'fin_banda_util_hz': c[14], 'lineas_hz': list(c[15:15 + c[13]]), 'banda_ruido_hz': list(c[19:21]),
             'frecuencia_red_hz': c[21], 'snr_estimada_db': c[22], 'n_fft': c[23], 'dc_codigo': c[24],
             't_us': c[25], 'diag_fin_muestra': c[26], 'diag_muestras': c[27],
-            'muestras': np.frombuffer(trama, '<i2', n, CABECERA)}
+            'posicion_ciclo': None if c[28] == SIN_POSICION else c[28], 'inicio_ciclo': c[29],
+            'componente': COMPONENTES[c[30] & 3], 'ref_estado': ESTADOS_REF[c[31] & 3],
+            'muestras': np.frombuffer(trama, '<i2', n, CABECERA),
+            'referencia': np.frombuffer(trama, '<i2', n, CABECERA + 2 * n) if c[5] >> 6 & 1 else None}
 
 
 class Receptor:
@@ -85,14 +107,15 @@ class Receptor:
                 return tramas
             self.descartados += i
             del self.pendiente[:i]
-            if len(self.pendiente) < 10:
+            if len(self.pendiente) < 12:
                 return tramas
             n = int.from_bytes(self.pendiente[8:10], 'little')
             if self.pendiente[2] != VERSION or self.pendiente[3] != CABECERA or not 0 < n <= 2048:
                 self.descartados += 1
                 del self.pendiente[:1]
                 continue
-            largo = CABECERA + 2 * n + 4
+            con_ref = int.from_bytes(self.pendiente[10:12], 'little') >> 6 & 1
+            largo = CABECERA + 2 * n * (2 if con_ref else 1) + 4
             if len(self.pendiente) < largo:
                 return tramas
             trama = bytes(self.pendiente[:largo])
