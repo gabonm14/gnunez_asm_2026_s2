@@ -3,7 +3,7 @@
  *
  * Cadena: emisor -> DAC -> PAM8403 -> parlante -> aire -> micrófono MAX4466 -> RC -> ADC.
  *
- * 1) Captura: ADC1 (GPIO34) a 16 kHz exactos por temporizador, doble búfer de 1024 muestras,
+ * 1) Captura: ADC2 (GPIO4) a 16 kHz exactos por temporizador, doble búfer de 1024 muestras,
  *    secuencia, marca de tiempo, nivel mín./máx. y detección de recorte, atraso,
  *    desbordamiento y fs fuera de tolerancia. La DC del micrófono (~1.65 V) se sigue con un
  *    pasa altos suave muestra a muestra, sin saltos entre bloques.
@@ -1547,8 +1547,13 @@ void nodo1_bytes(Nodo1& n, const uint8_t* b, size_t cuantos) {
 // ============================================================================
 #ifdef ARDUINO
 
-constexpr int PIN_ADC = 34;                   // ADC1_CH6, solo entrada. ADC2 no: choca con el WiFi
-constexpr adc_channel_t CANAL_ADC = ADC_CHANNEL_6;
+// Entrada del micrófono. GPIO4 es ADC2_CH0: el ADC2 no funciona con el WiFi encendido (el nodo 1
+// no lo usa). Para volver a GPIO34 (ADC1_CH6, solo entrada): PIN_ADC 34, UNIDAD_ADC ADC_UNIT_1,
+// CANAL_ADC ADC_CHANNEL_6. Ojo: GPIO0, 2 y 15 también son ADC2 pero afectan el arranque.
+constexpr int PIN_ADC = 4;
+constexpr adc_unit_t UNIDAD_ADC = ADC_UNIT_2;
+constexpr adc_channel_t CANAL_ADC = ADC_CHANNEL_0;
+static_assert(PIN_ADC != 0 && PIN_ADC != 2 && PIN_ADC != 15 && PIN_ADC != 12, "pin de arranque: no usar para el ADC");
 constexpr int PIN_TRAMA_RX = 16, PIN_TRAMA_TX = 17;  // UART2 hacia los nodos 2 y 3
 constexpr int PIN_SYNC = 35;                  // pulso del emisor (su GPIO27); solo entrada, sin pull interno
 constexpr uint32_t BAUDIOS_TRAMA = 921600;    // 2144 B cada 64 ms = 335 kbaud (36 %); con referencia 4192 B (71 %)
@@ -1567,6 +1572,7 @@ static uint8_t buf_sync[2][BLOQUE_ADC / 8];    // nivel del pin del pulso, un bi
 static std::atomic<bool> ocupado[2];          // true mientras loop() procesa ese búfer
 static std::atomic<uint32_t> adc_seq, adc_perdidos, adc_atrasadas, adc_recortadas;
 static std::atomic<int32_t> adc_lectura_max_us;
+static std::atomic<uint32_t> adc_fallidas;      // lecturas del ADC que devolvieron error
 // Retardo entre la alarma del temporizador y la lectura del ADC. Su variación es el jitter del
 // instante de muestreo: 1 µs de jitter limita la SNR a ≈ 36 dB en 2508 Hz. Resolución: 1 µs.
 static volatile uint32_t t_alarma_us;         // la escribe la ISR (32 bits: escritura atómica)
@@ -1628,8 +1634,8 @@ void tarea_adc(void*) {
     j.suma += retardo;
     j.suma2 += (uint64_t)retardo * retardo;
     j.max_us = std::max(j.max_us, retardo);
-    int raw = 0;
-    adc_oneshot_read(adc_unidad, CANAL_ADC, &raw);
+    static int raw = 2048;  // si una lectura del ADC2 falla, se repite la anterior y se cuenta
+    if (adc_oneshot_read(adc_unidad, CANAL_ADC, &raw) != ESP_OK) ++adc_fallidas;
     const bool pulso = gpio_ll_get_level(&GPIO, PIN_SYNC);  // mismo instante que la muestra
     const int32_t dt = esp_timer_get_time() - t0;
     if (dt > adc_lectura_max_us) adc_lectura_max_us = dt;
@@ -1667,14 +1673,14 @@ void tarea_adc(void*) {
 
 bool iniciar_adc() {
   adc_oneshot_unit_init_cfg_t unidad = {};
-  unidad.unit_id = ADC_UNIT_1;
+  unidad.unit_id = UNIDAD_ADC;
   if (adc_oneshot_new_unit(&unidad, &adc_unidad) != ESP_OK) return false;
   adc_oneshot_chan_cfg_t canal = {};
   canal.atten = ADC_ATTEN_DB_12;  // atenuación alta: rango útil ~0.15-2.45 V
   canal.bitwidth = ADC_BITWIDTH_12;
   if (adc_oneshot_config_channel(adc_unidad, CANAL_ADC, &canal) != ESP_OK) return false;
   adc_cali_line_fitting_config_t cali = {};
-  cali.unit_id = ADC_UNIT_1;
+  cali.unit_id = UNIDAD_ADC;
   cali.atten = ADC_ATTEN_DB_12;
   cali.bitwidth = ADC_BITWIDTH_12;
 #if CONFIG_IDF_TARGET_ESP32
@@ -1860,7 +1866,7 @@ void mostrar_adc() {
                 "\"latencia_bloque_ms\":%.1f,\"tramas_enviadas\":%lu,\"tramas_descartadas\":%lu,"
                 "\"armado_max_us\":%ld,\"baudios\":%lu,\"uso_uart_pct\":%.1f,"
                 "\"retardo_lectura_medio_us\":%.2f,\"jitter_muestreo_us\":%.2f,\"retardo_lectura_max_us\":%lu,"
-                "\"bytes_por_trama\":%d,\"tramas_usb\":%s,\"tramas_usb_enviadas\":%lu,\"tramas_usb_descartadas\":%lu}\n",
+                "\"lecturas_fallidas\":%lu,\"pin_adc\":%d,\"bytes_por_trama\":%d,\"tramas_usb\":%s,\"tramas_usb_enviadas\":%lu,\"tramas_usb_descartadas\":%lu}\n",
                 NOMBRES[fuente], (unsigned long)FS_ADC, fs_medida, (unsigned long)adc_seq.load(),
                 (unsigned long)adc_perdidos.load(), (unsigned long)adc_atrasadas.load(),
                 (unsigned long)adc_recortadas.load(), (long)adc_lectura_max_us.load(), (unsigned long)dc,
@@ -1870,7 +1876,7 @@ void mostrar_adc() {
                 // llenado del bloque + peor procesamiento + salida completa de la trama por la UART
                 1000.0f * BLOQUE_ADC / FS_ADC + proc_max_us / 1000.0f + envio_ms, (unsigned long)tramas_enviadas,
                 (unsigned long)tramas_descartadas, (long)armado_max_us, (unsigned long)BAUDIOS_TRAMA,
-                100 * bytes_s * 10 / BAUDIOS_TRAMA, media_j, desv_j, (unsigned long)j.max_us, largo,
+                100 * bytes_s * 10 / BAUDIOS_TRAMA, media_j, desv_j, (unsigned long)j.max_us, (unsigned long)adc_fallidas.load(), PIN_ADC, largo,
                 tramas_usb ? "true" : "false", (unsigned long)tramas_usb_enviadas, (unsigned long)tramas_usb_descartadas);
   jitter_reiniciar = true;  // como el mín./máx.: cada consulta mide el intervalo desde la anterior
   codigo_min = 4095;
@@ -1944,7 +1950,7 @@ void setup() {
     Serial.println("ERR no se pudo iniciar el ADC, la tarea o el temporizador");
     while (true) delay(1000);
   }
-  Serial.println("OK nodo 1 listo: micrófono en GPIO34 a 16 kHz, pulso del emisor en GPIO35, tramas por GPIO17; '?' muestra comandos");
+  Serial.printf("OK nodo 1 listo: micrófono en GPIO%d a 16 kHz, pulso del emisor en GPIO35, tramas por GPIO17; '?' muestra comandos\n", PIN_ADC);
 }
 
 void loop() {

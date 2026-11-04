@@ -31,7 +31,7 @@ Además guarda la **referencia limpia** para el MSE del nodo 3: un ciclo de la s
 
 | Señal | Pin | Nota |
 |---|---|---|
-| Micrófono → RC → ADC | **GPIO34** (ADC1_CH6) | Solo entrada. No usar el ADC2, porque deja de funcionar con WiFi |
+| Micrófono → RC → ADC | **GPIO4** (ADC2_CH0) | El ADC2 no funciona con el WiFi encendido; el nodo 1 no lo usa. GPIO0, 2 y 15 también son ADC2, pero afectan el arranque. Para volver a GPIO34 (ADC1_CH6), cambiar `PIN_ADC`, `UNIDAD_ADC` y `CANAL_ADC` en el `.ino` |
 | MAX4466 VCC | **3.3 V** del ESP32, filtrado (por ejemplo, 100 Ω en serie y 10 µF a GND) | A 5 V su salida puede pasar el máximo del ADC. El módulo es sensible al ruido de la alimentación |
 | Tramas TX → nodos 2 y 3 | **GPIO17** (UART2) | 921600 baudios, 8N1, 3.3 V |
 | UART2 RX | GPIO16 | Prueba de lazo (puente GPIO17 → GPIO16) |
@@ -42,7 +42,7 @@ Además guarda la **referencia limpia** para el MSE del nodo 3: un ciclo de la s
 ## Circuito de entrada y anti-aliasing
 
 ```
-MAX4466 OUT ── 1 kΩ ──┬── 1 kΩ ──┬──► GPIO34
+MAX4466 OUT ── 1 kΩ ──┬── 1 kΩ ──┬──► GPIO4
 (DC ≈ 1.65 V)        10 nF      10 nF
                       │          │
                      GND        GND

@@ -5,7 +5,7 @@ Revisión de `nodo1/` (firmware `nodo1_esp32.ino`, scripts de `nodo1/validacion/
 ## Qué le toca al nodo 1
 
 ```
-Emisor → parlante → aire → MAX4466 → RC → ADC (GPIO34) ─┐
+Emisor → parlante → aire → MAX4466 → RC → ADC (GPIO4) ──┐
 Emisor GPIO27 (pulso de sincronización) ───────────────► nodo 1 → trama UART2 → nodos 2 y 3
 ```
 
@@ -172,7 +172,7 @@ Cada paso aísla una parte de la cadena. Si uno falla, el problema está entre e
 | 1 | Nodo solo | — | `fuente sint`: FFT y diagnóstico en la placa; `validar_fft.py --adc`, `comparar_diagnostico.py` | FFT ≤ 10⁻³; diagnóstico igual a Python |
 | 2 | Entrada del ADC fija en ≈ 1.65 V (divisor), sin micrófono | — | Piso eléctrico del ADC | Anotar RMS en dBFS; al menos 40 dB bajo el nivel de la señal |
 | 3 | Micrófono, sala en silencio | `0` | Piso acústico de la sala | Igual que el 2; no debe haber picos fuertes (zumbido de 50/60 Hz) |
-| 4 | Cable directo: GPIO25 → RC → GPIO34, GND común | `vol 0.5`, `p 1`, luego `comp limpia` y `comp ruido` | El nodo sin el canal acústico | Picos a ≤ 1 bin; con limpia, diagnóstico sin interferencias; con ruido, solo 2508 Hz |
+| 4 | Cable directo: GPIO25 → RC → GPIO4, GND común | `vol 0.5`, `p 1`, luego `comp limpia` y `comp ruido` | El nodo sin el canal acústico | Picos a ≤ 1 bin; con limpia, diagnóstico sin interferencias; con ruido, solo 2508 Hz |
 | 5 | Por el aire | `p 1`, `comp limpia` | Señal útil después del canal | Pico en 440 Hz; anotar armónicos |
 | 6 | Por el aire | `comp ruido` en P1, P2 y P4 | El ruido llega como se insertó | Tono 2508 Hz; banda 2500–3800 Hz; impulsivo ≈ 4/s |
 | 7 | Por el aire | `comp mezcla`, P1–P5 | Captura y diagnóstico de cada prueba | Diagnóstico correcto e igual a Python con las mismas muestras |

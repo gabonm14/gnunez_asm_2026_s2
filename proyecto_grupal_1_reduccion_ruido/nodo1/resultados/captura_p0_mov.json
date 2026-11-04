@@ -1,0 +1,191 @@
+{
+  "capturas": [
+    {
+      "archivo": "nodo1/capturas/p0_mov.npz",
+      "nota": "moviendo compu",
+      "bloques": 187,
+      "bloques_perdidos": 0,
+      "muestras_recortadas": 0,
+      "muestras_atrasadas": 0,
+      "duracion_s": 11.968,
+      "fs_marcas_tiempo_hz": 16000.001344086133,
+      "fs_reloj_pc_hz": 15989.36977160557,
+      "fs_firmware_hz": 16000.0009765625,
+      "dc_codigo": 1239.0,
+      "pico_codigos": 316.0,
+      "rms_codigos": 68.62177277710425,
+      "rms_dbfs": -29.497360377219543,
+      "diagnosticos": [
+        {
+          "diag": 1,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 2,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 3,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 4,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 5,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 6,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 7,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 8,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 9,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 10,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 11,
+          "tipos_python": [
+            "red_electrica",
+            "banda"
+          ],
+          "tipos_nodo": [
+            "red_electrica",
+            "banda"
+          ],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [
+            48.76766712629816,
+            298.2134666508767,
+            397.62932636361097
+          ],
+          "lineas_nodo": [
+            48.76766586303711,
+            298.2134704589844,
+            397.6293640136719
+          ],
+          "coincide": true
+        }
+      ],
+      "tonos": [
+        {
+          "tono_hz": 440.0,
+          "pico_hz": 406.3459641996896,
+          "error_hz": 33.654035800310396,
+          "dentro_de_1_bin": false,
+          "nivel_db": -51.590102495676355
+        }
+      ],
+      "potencia_bandas_dbfs": {
+        "20-500 Hz": -36.73408721583672,
+        "500-2000 Hz": -31.999318004553515,
+        "2000-5000 Hz": -29.016808911858934,
+        "5000-8000 Hz": -29.000120935050507
+      },
+      "criterios": {
+        "sin_recorte": true,
+        "sin_bloques_perdidos": true,
+        "duracion_>=_10_s": true,
+        "picos_a_<=_1_bin": false,
+        "diagnostico_igual_a_python": true
+      }
+    }
+  ],
+  "repeticiones": {}
+}
