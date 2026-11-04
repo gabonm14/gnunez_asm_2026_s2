@@ -6,6 +6,9 @@ Sin adaptador (--usb): el nodo copia cada trama por el mismo cable USB de la con
     python nodo1/validacion/capturar.py --usb COM3 --segundos 12 \\
         --salida nodo1/capturas/p1_limpia.npz --nota "P1 comp limpia, 30 cm, MAX4466 a 25x"
 
+Con --ref K, antes de capturar guarda en el nodo la referencia limpia para el MSE: pide poner
+el emisor en comp limpia, espera a que el nodo la guarde y pide pasar a comp mezcla.
+
 Con adaptador (--uart): se lee la UART2 (GPIO17 -> RX del adaptador, GND común).
 Con --puerto (consola USB) además se cargan los parámetros de metadatos/, se pone la fuente
 y al final se guarda el estado del comando "adc".
@@ -56,10 +59,26 @@ def capturar(puerto_uart, segundos, con=None, fuente='adc'):
     return tramas, rx.resumen(), estado_adc
 
 
-def capturar_usb(con, segundos, fuente='adc'):
+def guardar_referencia(con, ciclos, periodo_max_s=7):
+    """Guarda la referencia limpia en el nodo ("ref capturar") y espera a que quede lista."""
+    input('Ponga el emisor en "comp limpia" y presione Enter... ')
+    con.comando(f'ref capturar {ciclos}')
+    espera = con.serie.timeout
+    con.serie.timeout = ciclos * periodo_max_s + 10  # P3: ciclos de 6 s
+    print(f'Guardando {ciclos} ciclos de la limpia...')
+    resto = con.esperar('REF')[1]  # un "ERR ref cancelada" detiene el script
+    con.serie.timeout = espera
+    r = json.loads(resto)
+    print(f"Referencia lista: {r['muestras']} muestras, periodo {r['periodo_ref']}, RMS {r['rms_codigos']} códigos")
+    input('Ponga el emisor en la componente que quiere capturar (normalmente "comp mezcla") y presione Enter... ')
+
+
+def capturar_usb(con, segundos, fuente='adc', ref=0):
     """Tramas copiadas por la consola USB (tramas_usb on); el texto intercalado se descarta."""
     con.configurar(parametros_proyecto()[0])
     con.comando(f'fuente {fuente}')
+    if ref:
+        guardar_referencia(con, ref)
     con.comando('adc', 'ADC')  # reinicia la ventana de mín./máx.
     con.comando('tramas_usb on')
     serie, espera = con.serie, con.serie.timeout
@@ -146,6 +165,8 @@ def main():
     parser.add_argument('--usb', help='consola USB de la placa: las tramas vienen por el mismo cable')
     parser.add_argument('--uart', help='adaptador USB-UART conectado a GPIO17')
     parser.add_argument('--simular', metavar='CASO', help='sin micrófono: pasar pruebas/CASO por el firmware')
+    parser.add_argument('--ref', type=int, default=0, metavar='K',
+                        help='con --usb: antes de capturar guarda la referencia limpia (K ciclos, 1..8)')
     parser.add_argument('--componente', default='contaminada', choices=('contaminada', 'limpia', 'ruido'),
                         help='con --simular: qué componente del caso se envía')
     parser.add_argument('--puerto', help='consola USB de la placa (opcional)')
@@ -160,7 +181,7 @@ def main():
     if args.simular:
         tramas, resumen, estado_adc = simular(con, args.simular, args.segundos, args.componente)
     elif args.usb:
-        tramas, resumen, estado_adc = capturar_usb(con, args.segundos, args.fuente)
+        tramas, resumen, estado_adc = capturar_usb(con, args.segundos, args.fuente, args.ref)
     else:
         tramas, resumen, estado_adc = capturar(args.uart, args.segundos, con, args.fuente)
     if con:

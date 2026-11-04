@@ -177,7 +177,7 @@ Cada paso aísla una parte de la cadena. Si uno falla, el problema está entre e
 | 6 | Por el aire | `comp ruido` en P1, P2 y P4 | El ruido llega como se insertó | Tono 2508 Hz; banda 2500–3800 Hz; impulsivo ≈ 4/s |
 | 7 | Por el aire | `comp mezcla`, P1–P5 | Captura y diagnóstico de cada prueba | Diagnóstico correcto e igual a Python con las mismas muestras |
 | 8 | Por el aire | `0`, `comp limpia`, `comp ruido` y `comp mezcla`, misma prueba | Método por espectros | P_mezcla ≈ P_limpia + P_ruido; anotar la SNR real (no será exactamente 2 dB) |
-| 8b | Por el aire, con GPIO27 → GPIO35 | `comp limpia` (guardar referencia), luego `comp mezcla` | Referencia limpia | Criterios de la sección "Referencia limpia para el MSE" |
+| 8b | Por el aire, con GPIO27 → GPIO35 | `comp limpia` (guardar referencia), luego `comp mezcla` | Referencia limpia: `capturar.py --usb ... --ref 8`, que guarda la referencia y captura en la misma conexión (abrir el puerto de nuevo podría reiniciar la placa y borrarla) | Criterios de la sección "Referencia limpia para el MSE" |
 | 9 | Tono externo de 12 kHz y de 4 kHz (teléfono) | `0` | Aliasing | Atenuación medida del alias (README del nodo) |
 
 Con `vol 0.5` en el paso 4, el DAC queda entre ≈ 0.99 y 2.31 V, dentro del rango lineal del ADC (0.15–2.45 V).

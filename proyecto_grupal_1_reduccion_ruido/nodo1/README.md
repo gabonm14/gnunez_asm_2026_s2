@@ -167,8 +167,9 @@ python nodo1/validacion/analizar_captura.py nodo1/capturas/caso_1_r*.npz --caso 
 python nodo1/validacion/verificar_espectros.py --sala nodo1/capturas/p1_sala.npz --limpia nodo1/capturas/p1_limpia.npz \
     --ruido nodo1/capturas/p1_ruido.npz --mezcla nodo1/capturas/p1_mezcla.npz --tonos 440 --tonos-ruido 2508 --nombre p1
 
-# referencia: emisor en comp limpia, "ref capturar 8" en la consola; luego comp mezcla y capturar
-python nodo1/validacion/verificar_referencia.py --captura nodo1/capturas/p1_mezcla.npz
+# referencia: --ref 8 guarda la referencia (pide comp limpia en el emisor) y luego captura (pide comp mezcla)
+python nodo1/validacion/capturar.py --usb COM3 --ref 8 --segundos 12 --salida nodo1/capturas/p1_mezcla_ref.npz
+python nodo1/validacion/verificar_referencia.py --captura nodo1/capturas/p1_mezcla_ref.npz
 ```
 
 | Medición pedida | Cómo |

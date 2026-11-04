@@ -7,7 +7,7 @@
     "perdidas": 2,
     "bytes_descartados": 10,
     "bytes_por_trama": 4192,
-    "armado_max_us": 10,
+    "armado_max_us": 20,
     "cumple": true
   },
   "python_tramas_conocidas": {
