@@ -27,7 +27,7 @@ const char* const TIPOS[] = {"impulsivo", "red_electrica", "tonal", "banda"};
 static uint8_t buf[CABECERA + 4 * N_MAX + 4];
 static int n = 0, esperado = 0;
 static uint32_t tabla_crc[256];
-static uint32_t validas = 0, errores_crc = 0, perdidas = 0, ultima_seq = 0;
+static uint32_t validas = 0, errores_crc = 0, perdidas = 0, reinicios = 0, ultima_seq = 0;
 static bool hay_seq = false, hay_trama = false;
 
 uint16_t leer16(const uint8_t* p) { return p[0] | p[1] << 8; }
@@ -62,7 +62,10 @@ bool recibir(uint8_t b) {
   n = 0;
   if (crc32(buf + 2, esperado - 6) != leer32(buf + esperado - 4)) { ++errores_crc; return false; }
   const uint32_t seq = leer32(buf + 4);
-  if (hay_seq && seq != ultima_seq + 1) perdidas += seq - ultima_seq - 1;
+  // Si la secuencia retrocede, el nodo 1 se reinició (por ejemplo, al abrir su monitor serie):
+  // no son tramas perdidas.
+  if (hay_seq && seq < ultima_seq) ++reinicios;
+  else if (hay_seq && seq != ultima_seq + 1) perdidas += seq - ultima_seq - 1;
   ultima_seq = seq;
   hay_seq = true;
   ++validas;
@@ -80,18 +83,25 @@ void setup() {
 void loop() {
   static uint32_t bytes = 0, inicio = 0, validas_antes = 0;
   static uint8_t ultima[CABECERA + 2 * 8];   // cabecera y primeras 8 muestras de la última trama
-  while (Serial1.available() > 0) {
-    ++bytes;
-    if (recibir(Serial1.read())) {
-      memcpy(ultima, buf, sizeof(ultima));
-      hay_trama = true;
-    }
+  // Lectura por bloques: read() de a un byte no alcanza a 921600 con la referencia (≈ 65 KB/s),
+  // el búfer se desborda y llegan tramas cortadas. Además se sale a imprimir cada 0.5 s aunque
+  // sigan llegando datos.
+  static uint8_t trozo[1024];
+  int disponibles;
+  while ((disponibles = Serial1.available()) > 0 && millis() - inicio < 500) {
+    const size_t leidos = Serial1.read(trozo, std::min(disponibles, (int)sizeof(trozo)));
+    bytes += leidos;
+    for (size_t i = 0; i < leidos; ++i)
+      if (recibir(trozo[i])) {
+        memcpy(ultima, buf, sizeof(ultima));
+        hay_trama = true;
+      }
   }
   if (millis() - inicio < 500) return;
   inicio = millis();
-  CONSOLA.printf("bytes %lu | tramas validas %lu (total %lu) | CRC malo %lu | perdidas %lu\n", (unsigned long)bytes,
-                (unsigned long)(validas - validas_antes), (unsigned long)validas, (unsigned long)errores_crc,
-                (unsigned long)perdidas);
+  CONSOLA.printf("bytes %lu | tramas validas %lu (total %lu) | CRC malo %lu | perdidas %lu | reinicios del nodo 1 %lu\n",
+                (unsigned long)bytes, (unsigned long)(validas - validas_antes), (unsigned long)validas,
+                (unsigned long)errores_crc, (unsigned long)perdidas, (unsigned long)reinicios);
   if (hay_trama) {
     const uint16_t estado = leer16(ultima + 10);
     CONSOLA.printf("   seq %lu | estado 0x%02x%s | diagnostico #%lu tipos [", (unsigned long)leer32(ultima + 4), estado,
