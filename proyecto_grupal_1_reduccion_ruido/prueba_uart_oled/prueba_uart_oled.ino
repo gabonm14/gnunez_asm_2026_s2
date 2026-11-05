@@ -9,6 +9,14 @@
  */
 #include <Arduino.h>
 
+// Consola en el UART0: el mismo puerto donde salen los mensajes de arranque del S3. Con
+// "USB CDC On Boot" activado, Serial iría al USB nativo y en este monitor no se vería nada.
+#if ARDUINO_USB_CDC_ON_BOOT
+#define CONSOLA Serial0
+#else
+#define CONSOLA Serial
+#endif
+
 constexpr int PIN_RX = 16, PIN_TX = 15;
 constexpr uint32_t BAUDIOS = 921600;       // igual que BAUDIOS_TRAMA del nodo 1
 constexpr int CABECERA = 92, N_MAX = 2048;
@@ -62,11 +70,11 @@ bool recibir(uint8_t b) {
 }
 
 void setup() {
-  Serial.begin(921600);                      // monitor serie del S3
+  CONSOLA.begin(115200);                     // monitor serie del S3 (solo consola; el enlace va por Serial1)
   Serial1.setRxBufferSize(16384);            // el de fábrica (256 B) se llena en < 3 ms a 921600
   Serial1.begin(BAUDIOS, SERIAL_8N1, PIN_RX, PIN_TX);
   delay(500);
-  Serial.println("Esperando tramas del nodo 1 (GPIO17 -> GPIO16, GND comun)...");
+  CONSOLA.println("Esperando tramas del nodo 1 (GPIO17 -> GPIO16, GND comun)...");
 }
 
 void loop() {
@@ -81,20 +89,20 @@ void loop() {
   }
   if (millis() - inicio < 500) return;
   inicio = millis();
-  Serial.printf("bytes %lu | tramas validas %lu (total %lu) | CRC malo %lu | perdidas %lu\n", (unsigned long)bytes,
+  CONSOLA.printf("bytes %lu | tramas validas %lu (total %lu) | CRC malo %lu | perdidas %lu\n", (unsigned long)bytes,
                 (unsigned long)(validas - validas_antes), (unsigned long)validas, (unsigned long)errores_crc,
                 (unsigned long)perdidas);
   if (hay_trama) {
     const uint16_t estado = leer16(ultima + 10);
-    Serial.printf("   seq %lu | estado 0x%02x%s | diagnostico #%lu tipos [", (unsigned long)leer32(ultima + 4), estado,
+    CONSOLA.printf("   seq %lu | estado 0x%02x%s | diagnostico #%lu tipos [", (unsigned long)leer32(ultima + 4), estado,
                   estado & EST_REF ? " (con referencia)" : "", (unsigned long)leer32(ultima + 24));
     for (int i = 0, primero = 1; i < 4; ++i)
-      if (ultima[28] & (1 << i)) Serial.printf(primero ? "%s" : ",%s", TIPOS[i]), primero = 0;
-    Serial.printf("] lineas [");
-    for (int i = 0; i < ultima[30]; ++i) Serial.printf(i ? ", %.1f" : "%.1f", leerf(ultima + 36 + 4 * i));
-    Serial.printf("] Hz | banda %.0f-%.0f Hz | muestras:", leerf(ultima + 52), leerf(ultima + 56));
-    for (int i = 0; i < 8; ++i) Serial.printf(" %d", (int16_t)leer16(ultima + CABECERA + 2 * i));
-    Serial.println();
+      if (ultima[28] & (1 << i)) CONSOLA.printf(primero ? "%s" : ",%s", TIPOS[i]), primero = 0;
+    CONSOLA.printf("] lineas [");
+    for (int i = 0; i < ultima[30]; ++i) CONSOLA.printf(i ? ", %.1f" : "%.1f", leerf(ultima + 36 + 4 * i));
+    CONSOLA.printf("] Hz | banda %.0f-%.0f Hz | muestras:", leerf(ultima + 52), leerf(ultima + 56));
+    for (int i = 0; i < 8; ++i) CONSOLA.printf(" %d", (int16_t)leer16(ultima + CABECERA + 2 * i));
+    CONSOLA.println();
   }
   bytes = 0;
   validas_antes = validas;
