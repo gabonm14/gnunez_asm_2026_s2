@@ -212,6 +212,9 @@ Medido con el montaje final (parlante, MAX4466, ESP32): el canal agrega frecuenc
 |---|---|---|
 | `umbral_ocupacion_db` | 40 | 30 |
 | `ancho_linea_hz` | 100 | 125 |
+| `separacion_impulsos_ms` (nuevo) | — (solo se agrupaban atípicas consecutivas) | 30 |
+
+El parlante hace oscilar cada clic de P4 unos milisegundos y cada oscilación contaba como un impulso: el nodo estimaba ≈ 280–370/s con 4/s insertados. Medido en el nodo con P4 mezcla: con 10 ms, 13.4/s; con 30 ms, **5.9/s** (mediana 5; el inicio de cada chirp suma algunos eventos). En la simulación, con 30 ms el error medio de la tasa es 19 % (antes 0 %): con 10/s insertados se cuentan ≈ 7.5, porque dos impulsos a menos de 30 ms se cuentan como uno. El tipo detectado no cambia.
 
 | Efecto | Resultado |
 |---|---|

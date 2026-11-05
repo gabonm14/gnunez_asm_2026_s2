@@ -7,6 +7,7 @@
   "margen_banda_util_hz": 100,
   "umbral_curtosis": 20,
   "k_atipicas_mad": 8,
+  "separacion_impulsos_ms": 30,
   "frecuencias_red_hz": [50, 60],
   "armonicos_red_min": 3,
   "max_armonico_red": 10,
