@@ -69,6 +69,7 @@ struct ConfigNodo1 {
   float margen_banda_util_hz = 100;
   float umbral_curtosis = 20;
   float k_atipicas_mad = 8;
+  float separacion_impulsos_ms = 30;  // atípicas a menos de esto de la anterior: mismo impulso
   float frecuencias_red_hz[MAX_RED] = {50, 60};
   int armonicos_red_min = 3;
   int max_armonico_red = 10;
@@ -105,7 +106,8 @@ struct EstadoDsp {
   uint32_t marcos, muestras;
   // Impulsividad: momentos de la diferencia centrada en su mediana por trozo de N.
   int n_dif;
-  bool hay_previa, atipica_previa;
+  bool hay_previa;
+  uint32_t desde_atipica;   // muestras desde la última diferencia atípica (agrupa impulsos)
   float previa, mediana_previa, mad_previa;
   double s2, s4;
   uint32_t n_d, eventos;
@@ -299,6 +301,7 @@ const Parametro PARAMETROS[] = {
     P_(margen_banda_util_hz, nullptr, false, 0, 10000),
     P_(umbral_curtosis, "curtosis", false, 0, 1e6),
     P_(k_atipicas_mad, "kmad", false, 0.5, 1000),
+    P_(separacion_impulsos_ms, "sep_imp", false, 0, 1000),
     {"frecuencia_red_a_hz", "red_a", offsetof(ConfigNodo1, frecuencias_red_hz), false, 0, 1000},
     {"frecuencia_red_b_hz", "red_b", offsetof(ConfigNodo1, frecuencias_red_hz) + sizeof(float), false, 0, 1000},
     P_(armonicos_red_min, nullptr, true, 1, MAX_ARMONICO),
@@ -386,7 +389,8 @@ void dsp_reiniciar(EstadoDsp& e) {
   e.llenado = 0;
   e.marcos = e.muestras = 0;
   e.n_dif = 0;
-  e.hay_previa = e.atipica_previa = false;
+  e.hay_previa = false;
+  e.desde_atipica = UINT32_MAX / 2;
   e.mad_previa = -1;
   e.s2 = e.s4 = 0;
   e.n_d = e.eventos = 0;
@@ -468,13 +472,18 @@ void procesar_trozo(EstadoDsp& e, const ConfigNodo1& c) {
     e.mad_previa = mediana(e.trabajo, n) / 0.6745f;
   }
   const float limite = c.k_atipicas_mad * std::max(e.mad_previa, FLT_MIN);
+  const uint32_t separacion = std::max<uint32_t>(1, (uint32_t)lroundf(c.separacion_impulsos_ms * c.fs_hz / 1000));
   for (int i = 0; i < n; ++i) {
     const double d = e.dif[i] - e.mediana_previa, d2 = d * d;
     e.s2 += d2;
     e.s4 += d2 * d2;
     const bool atipica = fabs(d) > limite;
-    if (atipica && !e.atipica_previa) ++e.eventos;  // un evento = grupo de muestras atípicas
-    e.atipica_previa = atipica;
+    // Un evento = grupo de atípicas separadas a lo más por separacion_impulsos_ms (como Python).
+    ++e.desde_atipica;
+    if (atipica) {
+      if (e.desde_atipica > separacion) ++e.eventos;
+      e.desde_atipica = 0;
+    }
   }
   e.n_d += n;
   e.n_dif = 0;
@@ -1443,7 +1452,7 @@ const char AYUDA[] =
     "  ref [capturar <k> | borrar]  referencia limpia: estado, capturar k ciclos (emisor en comp limpia)\n"
     "  prueba_ref               sincronia y referencia con una senal conocida\n"
 #ifdef ARDUINO
-    "  fuente <adc|sint|patron|nada>  origen de las muestras (por defecto adc)\n"
+    "  fuente <adc|sint|patron|nada>  origen de las muestras (por defecto adc); sint = 3 tonos + interferencia, con referencia\n"
     "  interferencia <hz>       tono interferente de la fuente sint\n"
     "  adc                      estado de la captura: fs medida, perdidas, recortes, UART\n"
     "  tramas <on|off>          envio de tramas por UART2\n"
@@ -1603,6 +1612,7 @@ static float dc_adc = -1;                     // < 0: se inicia con la media del
 static uint16_t codigo_min = 4095, codigo_max;  // desde la última consulta "adc"
 static uint32_t proc_max_us, proc_total_us, proc_n;
 static uint16_t codigos_sint[BLOQUE_ADC];
+static float limpia_sint[BLOQUE_ADC];           // parte útil de la fuente sint, en códigos (referencia exacta)
 static uint32_t tramas_enviadas, tramas_descartadas;
 static int32_t armado_max_us;
 static float bloque_f[BLOQUE_ADC];
@@ -1744,6 +1754,8 @@ void procesar_bloque(const uint16_t* codigos, const uint8_t* bits, InfoBloque b,
     for (int i = 0; i < BLOQUE_ADC; ++i) {
       dc_adc += ALFA_DC * (codigos[i] - dc_adc);
       muestras_tx[i] = (int16_t)lroundf(codigos[i] - dc_adc);
+      // Fuente sint: la referencia es la parte útil exacta, con la misma DC restada que la mezcla.
+      if (fuente == FUENTE_SINT) ref_tx[i] = (int16_t)lroundf(2048 + limpia_sint[i] - dc_adc);
       bloque_f[i] = muestras_tx[i] / 2048.0f;  // misma entrada que verá Python en la trama
       codigo_min = std::min(codigo_min, codigos[i]);
       codigo_max = std::max(codigo_max, codigos[i]);
@@ -1756,6 +1768,15 @@ void procesar_bloque(const uint16_t* codigos, const uint8_t* bits, InfoBloque b,
   bool con_ref = false;
   if (fuente == FUENTE_ADC) {
     con_ref = sync_bloque(nodo, bits, muestras_tx, BLOQUE_ADC, b, ref_tx, evento);
+  } else if (fuente == FUENTE_SINT) {
+    // Sin emisor: la fuente sint se repite cada segundo (frecuencias enteras), como un ciclo del
+    // emisor, y lleva su referencia exacta. Sirve para probar los nodos 2 y 3 sin micrófono.
+    con_ref = true;
+    b.hay_sync = true;
+    b.pos_ciclo = (b.seq * BLOQUE_ADC) % FS_ADC;
+    b.inicio_ciclo = b.pos_ciclo + BLOQUE_ADC > FS_ADC ? (int16_t)(FS_ADC - b.pos_ciclo) : (b.pos_ciclo == 0 ? 0 : -1);
+    b.componente = COMP_MEZCLA;
+    b.ref_estado = REF_LISTA;
   } else {
     b.componente = COMP_NINGUNA;
     b.ref_estado = nodo.ref.estado;
@@ -1811,8 +1832,10 @@ void avanzar_fuente_prueba() {
   while (generadas + BLOQUE_ADC <= debidas) {
     for (int i = 0; i < BLOQUE_ADC && fuente == FUENTE_SINT; ++i) {  // el patrón se arma en procesar_bloque
       const float t = (float)((generadas + i) % FS_ADC) / FS_ADC;  // fase exacta cada segundo si f es entera
-      const float x = sinf(2 * PI * 440 * t) + 0.55f * sinf(2 * PI * 880 * t + 0.61f) +
-                      0.3f * sinf(2 * PI * 1320 * t - 0.87f) + 0.8f * sinf(2 * PI * f_interferencia_hz * t);
+      const float util = sinf(2 * PI * 440 * t) + 0.55f * sinf(2 * PI * 880 * t + 0.61f) +
+                         0.3f * sinf(2 * PI * 1320 * t - 0.87f);
+      const float x = util + 0.8f * sinf(2 * PI * f_interferencia_hz * t);
+      limpia_sint[i] = 700 * util;
       codigos_sint[i] = (uint16_t)std::min(4095L, std::max(0L, lroundf(2048 + 700 * x)));
     }
     generadas += BLOQUE_ADC;
