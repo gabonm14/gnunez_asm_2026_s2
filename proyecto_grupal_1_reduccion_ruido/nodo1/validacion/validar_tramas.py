@@ -1,8 +1,8 @@
 """Prueba de recepción de tramas con bloques conocidos.
 
 1) Consola (host o --puerto): el firmware arma k tramas con el patrón conocido y las imprime
-   en hexadecimal; aquí se decodifican con trama.Receptor (implementación independiente) y se
-   verifican CRC, secuencia y muestras. Luego se inyectan fallas en ese flujo (bit alterado,
+   en hexadecimal (las impares con referencia); aquí se decodifican con trama.Receptor
+   (implementación independiente) y se verifican CRC, secuencia, muestras y referencia. Luego se inyectan fallas en ese flujo (bit alterado,
    trama perdida, basura) y se comprueba que se detecten. También corre prueba_trama, la
    misma verificación hecha por el receptor del firmware, y se comprueba que los parámetros
    del diagnóstico de caso_1 lleguen en la trama igual que en el DIAG.
@@ -20,7 +20,7 @@ import time
 import numpy as np
 
 from conexion import NODO1, RAIZ, Conexion, parametros_proyecto
-from trama import Receptor, patron
+from trama import Receptor, es_patron
 
 K = 20
 
@@ -40,7 +40,7 @@ def prueba_consola(con):
     tramas = rx.alimentar(b''.join(flujo))
     limpio = {**rx.resumen(),
               'secuencia_consecutiva': [t['seq'] for t in tramas] == list(range(K)),
-              'muestras_ok': sum(np.array_equal(t['muestras'], patron(t['seq'], t['n_muestras'])) for t in tramas)}
+              'muestras_ok': sum(es_patron(t) for t in tramas)}
     limpio['cumple'] = (limpio['validas'] == K and limpio['muestras_ok'] == K and limpio['secuencia_consecutiva']
                         and limpio['errores_crc'] == 0 and limpio['bytes_descartados'] == 0)
 
@@ -52,7 +52,7 @@ def prueba_consola(con):
     rx = Receptor()
     tramas = rx.alimentar(b''.join(con_fallas))
     fallas = {**rx.resumen(),
-              'muestras_ok': sum(np.array_equal(t['muestras'], patron(t['seq'], t['n_muestras'])) for t in tramas)}
+              'muestras_ok': sum(es_patron(t) for t in tramas)}
     fallas['cumple'] = (fallas['validas'] == K - 2 and fallas['muestras_ok'] == K - 2
                         and fallas['errores_crc'] == 1 and fallas['perdidas'] == 2)
     return {'firmware_prueba_trama': firmware, 'python_tramas_conocidas': limpio, 'python_con_fallas': fallas,
@@ -103,7 +103,7 @@ def prueba_uart(puerto_uart, segundos, con=None):
             for e in t['estado']:
                 bits_estado[e] = bits_estado.get(e, 0) + 1
             if con:
-                ok = np.array_equal(t['muestras'], patron(t['seq'], t['n_muestras']))
+                ok = es_patron(t)
                 muestras_ok += ok
                 muestras_mal += not ok
             ultima = t

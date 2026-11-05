@@ -1,0 +1,54 @@
+{
+  "archivos": {
+    "sala": "nodo1/capturas/p0_pruebafinal.npz",
+    "limpia": "nodo1/capturas/p5_pruebafinallimpia2.npz",
+    "ruido": "nodo1/capturas/p5_pruebafinalruido2.npz",
+    "mezcla": "nodo1/capturas/p5_pruebafinalmezcla2.npz"
+  },
+  "bandas_comparadas": 6,
+  "ancho_banda_hz": 250,
+  "desvio_suma_max_db": 0.11968987135795511,
+  "desvio_suma_mediana_db": 0.015454759547177994,
+  "snr_microfono_db": -2.279849026861053,
+  "bandas_nuevas_hz": [],
+  "mezcla_min_mv": 810,
+  "mezcla_max_mv": 1414,
+  "sala_bajo_limpia_db": 19.618403005930453,
+  "sala_bajo_ruido_db": 21.88152206013104,
+  "tonos_limpia": [
+    {
+      "tono_hz": 440.0,
+      "pico_hz": 440.1794163828485,
+      "error_hz": 0.17941638284850114,
+      "dentro_de_1_bin": true,
+      "nivel_db": -34.06737228667938
+    },
+    {
+      "tono_hz": 880.0,
+      "pico_hz": 880.2370448864348,
+      "error_hz": 0.23704488643477362,
+      "dentro_de_1_bin": true,
+      "nivel_db": -31.328061761674793
+    },
+    {
+      "tono_hz": 1320.0,
+      "pico_hz": 1320.0475485075942,
+      "error_hz": 0.047548507594228795,
+      "dentro_de_1_bin": true,
+      "nivel_db": -37.148340561967665
+    }
+  ],
+  "tonos_ruido": [],
+  "parseval": {
+    "potencia_tiempo": 608414014.0649023,
+    "potencia_frecuencia": 608414014.0649024,
+    "error_relativo": 2.220446049250313e-16
+  },
+  "criterios": {
+    "mezcla_=_limpia_+_ruido_-_sala_(<=_1.0_dB)": true,
+    "sin_bandas_nuevas_en_la_mezcla": true,
+    "mezcla_en_rango_lineal_del_adc_(150-2450_mV)": true,
+    "picos_a_<=_1_bin": true,
+    "parseval_por_bloque": true
+  }
+}

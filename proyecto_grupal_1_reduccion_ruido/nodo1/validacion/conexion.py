@@ -23,8 +23,13 @@ class Conexion:
         self.timeout = timeout
         if puerto:
             import serial  # pyserial, solo hace falta con la placa
-            self.serie = serial.Serial(puerto, baudios, timeout=timeout)
-            time.sleep(2)  # abrir el puerto puede reiniciar la placa
+            # DTR y RTS en reposo antes de abrir: en el DevKit mueven EN y GPIO0, y abrir el
+            # puerto con ellos activos reinicia la placa y borra lo que tenga en RAM (la referencia).
+            self.serie = serial.Serial(timeout=timeout)
+            self.serie.port, self.serie.baudrate = puerto, baudios
+            self.serie.dtr = self.serie.rts = False
+            self.serie.open()
+            time.sleep(2)  # por si la placa se reinició igual (algunos adaptadores lo hacen)
             self.serie.reset_input_buffer()
             self.proceso = None
             self.origen = f'esp32:{puerto}'
@@ -45,7 +50,8 @@ class Conexion:
             self.proceso.stdin.flush()
 
     def linea(self):
-        texto = (self.serie.readline() if self.serie else self.proceso.stdout.readline()).decode('utf-8').strip()
+        # 'replace': con tramas_usb pueden quedar bytes binarios entre las líneas de texto.
+        texto = (self.serie.readline() if self.serie else self.proceso.stdout.readline()).decode('utf-8', 'replace').strip()
         if not texto and self.serie:
             raise TimeoutError('El nodo 1 no respondió.')
         return texto

@@ -59,7 +59,16 @@ La SNR se fija con la potencia de la señal útil (Σa²/2 para tonos, la medida
 | Pin | Uso |
 |---|---|
 | GPIO25 | Salida del DAC (0–3.3 V, centro ≈ 1.65 V) |
-| GPIO27 | Pulso de sincronización de 1 ms al inicio de cada ciclo de la señal útil: cada vuelta de la canción, el inicio de cada chirp de P4, o cada segundo con tonos |
+| GPIO27 | Pulso de sincronización al inicio de cada ciclo de la señal útil: cada vuelta de la canción, el inicio de cada chirp de P4, o cada segundo con tonos. Va a GPIO35 del nodo 1 |
+
+El ancho del pulso dice qué componente se emite, para que el nodo 1 sepa cuándo puede guardar la referencia limpia (`docs/nodo1_verificacion.md`):
+
+| Componente | Ancho |
+|---|---|
+| `mezcla` | 1 ms (16 muestras) |
+| `limpia` | 2 ms |
+| `ruido` | 3 ms |
+| Silencio (`0`) | Sin pulsos |
 
 ## Conexión al amplificador y al parlante
 

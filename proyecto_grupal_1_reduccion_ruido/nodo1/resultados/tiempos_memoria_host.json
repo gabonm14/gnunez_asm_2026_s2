@@ -4,42 +4,43 @@
     "n_bloque": 1024,
     "dc_ventana": {
       "n": 644,
-      "media_us": 0.8,
-      "max_us": 7,
-      "ultimo_us": 1
+      "media_us": 2.4,
+      "max_us": 12,
+      "ultimo_us": 2
     },
     "fft": {
       "n": 644,
-      "media_us": 19.6,
-      "max_us": 46,
-      "ultimo_us": 19
+      "media_us": 52.8,
+      "max_us": 193,
+      "ultimo_us": 45
     },
     "psd": {
       "n": 644,
-      "media_us": 0.3,
-      "max_us": 1,
+      "media_us": 0.7,
+      "max_us": 13,
       "ultimo_us": 1
     },
     "impulsos": {
       "n": 343,
-      "media_us": 15.3,
-      "max_us": 86,
-      "ultimo_us": 17
+      "media_us": 38.6,
+      "max_us": 70,
+      "ultimo_us": 41
     },
     "diagnostico": {
       "n": 21,
-      "media_us": 5.1,
-      "max_us": 10,
-      "ultimo_us": 4
+      "media_us": 17.0,
+      "max_us": 28,
+      "ultimo_us": 13
     },
     "presupuesto_marco_us": 32000,
-    "carga_cpu_pct": 0.09,
+    "carga_cpu_pct": 0.24,
     "latencia_diagnostico_ms": 1000.0
   },
   "memoria": {
     "n_bloque": 1024,
     "bytes_buffers_dsp": 29193,
-    "bytes_estado_nodo1": 3840,
-    "bytes_estaticos_diagnostico": 5304
+    "bytes_estado_nodo1": 3912,
+    "bytes_estaticos_diagnostico": 5304,
+    "bytes_referencia": 64000
   }
 }

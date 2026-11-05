@@ -1,0 +1,145 @@
+{
+  "capturas": [
+    {
+      "archivo": "nodo1/capturas/hum_c.npz",
+      "nota": "divisor en lugar del microfono",
+      "bloques": 94,
+      "bloques_perdidos": 0,
+      "muestras_recortadas": 0,
+      "muestras_atrasadas": 0,
+      "duracion_s": 6.016,
+      "fs_marcas_tiempo_hz": 15999.99462365772,
+      "fs_reloj_pc_hz": 15974.375202006719,
+      "fs_firmware_hz": 15999.994140625,
+      "dc_codigo": 1909.0,
+      "pico_codigos": 116.0,
+      "rms_codigos": 21.438734039988624,
+      "rms_dbfs": -39.60261631342222,
+      "diagnosticos": [
+        {
+          "diag": 1,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 2,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 3,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 4,
+          "tipos_python": [
+            "red_electrica",
+            "banda"
+          ],
+          "tipos_nodo": [
+            "red_electrica",
+            "banda"
+          ],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [
+            202.21757007194003,
+            248.58383233519274,
+            301.2778921731936
+          ],
+          "lineas_nodo": [
+            202.2175750732422,
+            248.58383178710938,
+            301.27789306640625
+          ],
+          "coincide": true
+        },
+        {
+          "diag": 5,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        },
+        {
+          "diag": 6,
+          "tipos_python": [],
+          "tipos_nodo": [],
+          "confianza_python": "baja",
+          "confianza_nodo": "baja",
+          "fin_banda_util_python": null,
+          "fin_banda_util_nodo": NaN,
+          "lineas_python": [],
+          "lineas_nodo": [],
+          "coincide": true
+        }
+      ],
+      "tonos": [
+        {
+          "tono_hz": 60.0,
+          "pico_hz": 32.15449085111367,
+          "error_hz": 27.84550914888633,
+          "dentro_de_1_bin": false,
+          "nivel_db": -59.73299220552373
+        },
+        {
+          "tono_hz": 120.0,
+          "pico_hz": 152.30865781828734,
+          "error_hz": 32.308657818287344,
+          "dentro_de_1_bin": false,
+          "nivel_db": -61.24163884662054
+        },
+        {
+          "tono_hz": 180.0,
+          "pico_hz": 152.30865781828734,
+          "error_hz": 27.691342181712656,
+          "dentro_de_1_bin": false,
+          "nivel_db": -61.24163884662054
+        }
+      ],
+      "potencia_bandas_dbfs": {
+        "20-500 Hz": -46.72766960139586,
+        "500-2000 Hz": -42.122451289228984,
+        "2000-5000 Hz": -39.087596822172294,
+        "5000-8000 Hz": -39.14377191143936
+      },
+      "criterios": {
+        "sin_recorte": true,
+        "sin_bloques_perdidos": true,
+        "duracion_>=_10_s": false,
+        "picos_a_<=_1_bin": false,
+        "diagnostico_igual_a_python": true
+      }
+    }
+  ],
+  "repeticiones": {}
+}

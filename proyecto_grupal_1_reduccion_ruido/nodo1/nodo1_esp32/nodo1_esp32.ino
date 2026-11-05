@@ -3,7 +3,7 @@
  *
  * Cadena: emisor -> DAC -> PAM8403 -> parlante -> aire -> micrófono MAX4466 -> RC -> ADC.
  *
- * 1) Captura: ADC1 (GPIO34) a 16 kHz exactos por temporizador, doble búfer de 1024 muestras,
+ * 1) Captura: ADC2 (GPIO4) a 16 kHz exactos por temporizador, doble búfer de 1024 muestras,
  *    secuencia, marca de tiempo, nivel mín./máx. y detección de recorte, atraso,
  *    desbordamiento y fs fuera de tolerancia. La DC del micrófono (~1.65 V) se sigue con un
  *    pasa altos suave muestra a muestra, sin saltos entre bloques.
@@ -12,6 +12,9 @@
  * 4) Comunicación: trama por UART2 (GPIO17) con delimitador, secuencia, estado, parámetros
  *    del diagnóstico, muestras y CRC-32 hacia los nodos 2 y 3.
  * 5) Consola serie (USB): parámetros sin recompilar, pruebas, tiempos y memoria.
+ * 6) Sincronización con el emisor (GPIO27 -> GPIO35) y referencia limpia para el MSE del nodo 3:
+ *    se guarda un ciclo de la señal limpia tal como llega al micrófono y viaja en cada trama
+ *    (docs/nodo1_verificacion.md, "Referencia limpia para el MSE").
  *
  * Fuera de Arduino (sin ARDUINO definido) este mismo archivo se compila en la PC con
  * nodo1/host/Makefile: la FFT es una radix-2 de referencia y la consola usa stdin/stdout.
@@ -36,6 +39,7 @@
 #include "esp_dsp.h"
 #include "esp_heap_caps.h"
 #include "esp_timer.h"
+#include "hal/gpio_ll.h"
 #else
 #include <unistd.h>
 #include <chrono>
@@ -57,9 +61,9 @@ struct ConfigNodo1 {
   float fs_hz = 16000;
   int n_bloque = 1024;
   float periodo_diag_ms = 1000;   // pipeline.json: segundos_diagnostico
-  float umbral_ocupacion_db = 40;
+  float umbral_ocupacion_db = 30;   // 40 en la simulación original; 30 por el hardware (docs/nodo1_verificacion.md)
   int hueco_fusion_bins = 3;
-  float ancho_linea_hz = 100;
+  float ancho_linea_hz = 125;       // 100 en la simulación original; un tono fuera de bin mide ~109 Hz a −40 dB
   float ancho_dc_hz = 100;
   float hueco_util_hz = 1000;
   float margen_banda_util_hz = 100;
@@ -143,6 +147,40 @@ struct Diagnostico {
   float tiempo_ms;
 };
 
+// ---- Sincronización con el emisor y referencia limpia (docs/nodo1_verificacion.md) ----
+// El emisor marca el inicio de cada ciclo de su señal con un pulso cuyo ancho dice qué emite:
+// 1 ms mezcla, 2 ms limpia, 3 ms ruido; en silencio no hay pulsos.
+constexpr int REF_MAX = 32000;             // 2 s: un ciclo de 1 s entero o los primeros 2 s de la canción
+constexpr int REF_K_MAX = 8;               // 8 ciclos con |x| <= 4095 suman <= 32760: la suma cabe en int16
+constexpr int16_t REF_SIN = INT16_MIN;     // "sin referencia" para esa muestra; |x| <= 4095 nunca llega
+constexpr uint32_t REF_TOLERANCIA = 2;     // muestras de diferencia admitidas entre periodos
+
+enum Componente : uint8_t { COMP_NINGUNA = 0, COMP_MEZCLA = 1, COMP_LIMPIA = 2, COMP_RUIDO = 3 };
+const char* const NOMBRES_COMP[] = {"ninguna", "mezcla", "limpia", "ruido"};
+enum EstadoRef : uint8_t { REF_VACIA = 0, REF_ESPERANDO = 1, REF_CAPTURANDO = 2, REF_LISTA = 3 };
+const char* const NOMBRES_REF[] = {"vacia", "esperando", "capturando", "lista"};
+enum EventoRef { EV_NADA, EV_LISTA, EV_CANCELADA };
+
+struct Sincronia {        // una lectura del pin por muestra
+  bool hay;               // hubo un flanco de subida y no se perdió la cuenta desde entonces
+  bool nivel;             // nivel de la muestra anterior
+  uint32_t pos;           // posición en el ciclo: muestras desde el último flanco de subida
+  uint32_t alto;          // muestras en alto del pulso en curso
+  uint32_t periodo;       // muestras entre los dos últimos flancos; 0 si aún no se midió
+  uint32_t ancho;         // muestras en alto del último pulso completo
+  uint32_t pulsos;
+  uint8_t componente;     // según el ancho del último pulso
+};
+
+struct Referencia {       // un ciclo de la limpia, en las mismas unidades que las muestras de la trama
+  int16_t* datos;         // REF_MAX
+  uint8_t estado;
+  uint32_t largo;         // muestras guardadas: min(periodo, REF_MAX)
+  uint32_t periodo;       // periodo del emisor al capturarla; con otro periodo no se aplica
+  int ciclos, hechos;
+  const char* motivo;     // por qué se canceló la última captura
+};
+
 // Arma texto con printf sin pasarse de la capacidad del buffer.
 struct Escritor {
   char* buf;
@@ -185,13 +223,16 @@ struct Nodo1 {
   int n_parcial;
   uint32_t muestras_totales;   // índice absoluto (la captura lo fija a seq * BLOQUE_ADC)
   const float* bloque_real;    // último bloque del ADC para fft_prueba adc (nullptr en la PC)
+  bool enviar_espectro;        // "espectro on": línea PSD tras cada DIAG, para graficar en la PC
+  Sincronia sync;
+  Referencia ref;
 };
 
 // ---- Trama hacia los nodos 2 y 3 (formato en README y en validacion/trama.py) ----
 constexpr int BLOQUE_ADC = 1024;           // doble búfer del ADC: 64 ms a 16 kHz
-constexpr int TRAMA_CABECERA = 84;         // incluye el delimitador
-constexpr int TRAMA_MAX = TRAMA_CABECERA + 2 * N_MAX + 4;
-constexpr uint8_t TRAMA_SYNC0 = 0xA5, TRAMA_SYNC1 = 0x5A, TRAMA_VERSION = 2;
+constexpr int TRAMA_CABECERA = 92;         // incluye el delimitador
+constexpr int TRAMA_MAX = TRAMA_CABECERA + 4 * N_MAX + 4;  // muestras y, si la hay, referencia
+constexpr uint8_t TRAMA_SYNC0 = 0xA5, TRAMA_SYNC1 = 0x5A, TRAMA_VERSION = 3;
 constexpr int MAX_LINEAS_TRAMA = 4;
 
 enum EstadoTrama : uint16_t {
@@ -201,6 +242,7 @@ enum EstadoTrama : uint16_t {
   EST_DIAG_NUEVO = 8,   // los parámetros del diagnóstico cambiaron desde la trama anterior
   EST_FS_FUERA = 16,    // la fs medida se aleja más de 0.5 % de la nominal
   EST_PRUEBA = 32,      // las muestras no vienen del ADC (fuente sintética o patrón)
+  EST_REF = 64,         // tras las muestras viaja la referencia limpia del mismo tramo
 };
 
 struct InfoBloque {     // lo que acompaña a cada bloque de muestras en la trama
@@ -210,6 +252,10 @@ struct InfoBloque {     // lo que acompaña a cada bloque de muestras en la tram
   float fs_medida_hz;
   uint16_t dc;          // nivel de DC restado, en código del ADC
   uint32_t t_us;        // esp_timer al cerrar el bloque (módulo 2^32)
+  bool hay_sync = false;      // se conoce la posición en el ciclo del emisor
+  uint32_t pos_ciclo = 0;     // posición en el ciclo de la primera muestra del bloque
+  int16_t inicio_ciclo = -1;  // índice dentro del bloque donde empieza un ciclo; -1 si ninguno
+  uint8_t componente = COMP_NINGUNA, ref_estado = REF_VACIA;
 };
 
 struct Receptor {       // decodificador de tramas byte a byte (prueba y lazo UART2)
@@ -269,6 +315,7 @@ static char salida[6144];  // una respuesta DIAG con 2x48 regiones cabe con marg
 static Nodo1 nodo;
 static uint8_t trama_tx[TRAMA_MAX];
 static int16_t muestras_tx[BLOQUE_ADC];
+static int16_t ref_tx[BLOQUE_ADC];        // referencia del bloque que viaja en la trama
 static uint32_t tabla_crc[256];
 
 void responder(Nodo1& n, const char* fmt, ...) __attribute__((format(printf, 2, 3)));
@@ -735,7 +782,9 @@ uint32_t crc32(const uint8_t* p, size_t n) {
 }
 
 // Arma la trama en t y devuelve su longitud. Sin diagnóstico aún, los parámetros van en NAN.
-int armar_trama(uint8_t* t, const InfoBloque& b, const int16_t* m, int n, const Diagnostico& d, int n_fft) {
+// Con ref (n valores, REF_SIN donde no hay), la referencia viaja después de las muestras.
+int armar_trama(uint8_t* t, const InfoBloque& b, const int16_t* m, int n, const Diagnostico& d, int n_fft,
+                const int16_t* ref) {
   const bool hay = d.numero > 0;
   memset(t, 0, TRAMA_CABECERA);
   t[0] = TRAMA_SYNC0;
@@ -744,7 +793,7 @@ int armar_trama(uint8_t* t, const InfoBloque& b, const int16_t* m, int n, const 
   t[3] = TRAMA_CABECERA;
   poner32(t + 4, b.seq);
   poner16(t + 8, n);
-  poner16(t + 10, b.estado);
+  poner16(t + 10, b.estado | (ref ? EST_REF : 0));
   poner16(t + 12, b.recortadas);
   poner16(t + 14, b.atrasadas);
   poner32(t + 16, b.perdidos);
@@ -764,8 +813,16 @@ int armar_trama(uint8_t* t, const InfoBloque& b, const int16_t* m, int n, const 
   poner32(t + 72, b.t_us);
   poner32(t + 76, hay ? d.fin_muestra : 0);  // muestras [fin - largo, fin) que cubrió el diagnóstico
   poner32(t + 80, hay ? d.muestras : 0);
+  poner32(t + 84, b.hay_sync ? b.pos_ciclo : 0xFFFFFFFFu);
+  poner16(t + 88, (uint16_t)(b.hay_sync ? b.inicio_ciclo : -1));
+  t[90] = b.componente;
+  t[91] = b.ref_estado;
   for (int i = 0; i < n; ++i) poner16(t + TRAMA_CABECERA + 2 * i, (uint16_t)m[i]);
-  const int largo = TRAMA_CABECERA + 2 * n;
+  int largo = TRAMA_CABECERA + 2 * n;
+  if (ref) {
+    for (int i = 0; i < n; ++i) poner16(t + largo + 2 * i, (uint16_t)ref[i]);
+    largo += 2 * n;
+  }
   poner32(t + largo, crc32(t + 2, largo - 2));  // el CRC cubre todo menos el delimitador
   return largo + 4;
 }
@@ -801,9 +858,12 @@ bool receptor_byte(Receptor& r, uint8_t b) {
       r.n = 0;
       return false;
     }
-    r.esperado = TRAMA_CABECERA + 2 * m + 4;
   }
-  if (r.n < 10 || r.n < r.esperado) return false;
+  if (r.n == 12) {  // el estado dice si viaja la referencia
+    const int m = leer16(r.buf + 8);
+    r.esperado = TRAMA_CABECERA + 2 * m * (leer16(r.buf + 10) & EST_REF ? 2 : 1) + 4;
+  }
+  if (r.n < 12 || r.n < r.esperado) return false;
   r.n = 0;
   if (crc32(r.buf + 2, r.esperado - 6) != leer32(r.buf + r.esperado - 4)) {
     ++r.errores_crc;
@@ -818,31 +878,45 @@ bool receptor_byte(Receptor& r, uint8_t b) {
 }
 
 // Bloque conocido para las pruebas de recepción: depende de la secuencia y de la posición.
+// Las tramas impares llevan además una referencia conocida: el patrón con el signo cambiado.
 int16_t patron(uint32_t seq, int i) { return (int16_t)((seq * 7u + i * 13u) & 0xFFF) - 2048; }
 
 bool trama_es_patron(const uint8_t* t) {
   const uint32_t seq = leer32(t + 4);
   const int n = leer16(t + 8);
-  for (int i = 0; i < n; ++i)
+  const bool con_ref = leer16(t + 10) & EST_REF;
+  if (con_ref != (seq % 2 == 1)) return false;
+  for (int i = 0; i < n; ++i) {
     if ((int16_t)leer16(t + TRAMA_CABECERA + 2 * i) != patron(seq, i)) return false;
+    if (con_ref && (int16_t)leer16(t + TRAMA_CABECERA + 2 * (n + i)) != -patron(seq, i)) return false;
+  }
   return true;
 }
 
 void escribir_trama_hex(Nodo1& n, int largo) {
   Escritor w{salida, sizeof(salida), 0};
   w.add("TRAMA ");
-  for (int i = 0; i < largo; ++i) w.add("%02x", trama_tx[i]);
+  for (int i = 0; i < largo; ++i) {
+    if (w.n > w.cap - 8) {  // una trama con referencia ocupa más que salida: se envía por partes
+      n.escribir(salida);
+      w.n = 0;
+    }
+    w.add("%02x", trama_tx[i]);
+  }
   w.add("\n");
   n.escribir(salida);
 }
 
 int armar_trama_patron(Nodo1& n, uint32_t seq) {
-  for (int i = 0; i < BLOQUE_ADC; ++i) muestras_tx[i] = patron(seq, i);
+  for (int i = 0; i < BLOQUE_ADC; ++i) {
+    muestras_tx[i] = patron(seq, i);
+    ref_tx[i] = -patron(seq, i);
+  }
   const InfoBloque b{seq, EST_PRUEBA, 0, 0, 0, n.cfg.fs_hz, 0, seq * 64000u};
-  return armar_trama(trama_tx, b, muestras_tx, BLOQUE_ADC, n.diag, n.dsp.N);
+  return armar_trama(trama_tx, b, muestras_tx, BLOQUE_ADC, n.diag, n.dsp.N, seq % 2 ? ref_tx : nullptr);
 }
 
-// Diez tramas conocidas por el receptor en memoria, con fallas inyectadas: la 3 con un bit
+// Diez tramas conocidas (las impares con referencia) por el receptor en memoria, con fallas inyectadas: la 3 con un bit
 // alterado (CRC), la 5 no se envía (pérdida) y antes de la 7 llega basura con delimitadores
 // falsos. Se esperan 8 tramas válidas con contenido correcto, 1 error de CRC y 2 pérdidas.
 void prueba_trama(Nodo1& n) {
@@ -881,12 +955,13 @@ float leerf(const uint8_t* p) {
 // que se ve en el monitor es exactamente lo que reciben los nodos 2 y 3. Con "completa" se
 // agregan las N muestras; si no, solo las 8 primeras.
 void describir_trama(Nodo1& n, const uint8_t* t, bool completa) {
-  static const char* const ESTADOS[] = {"recorte", "atraso", "perdida", "diag_nuevo", "fs_fuera", "prueba"};
+  static const char* const ESTADOS[] = {"recorte", "atraso", "perdida", "diag_nuevo", "fs_fuera", "prueba", "ref"};
   const int m = leer16(t + 8);
   const uint16_t estado = leer16(t + 10);
+  const bool con_ref = estado & EST_REF;
   Escritor w{salida, sizeof(salida), 0};
   w.add("TX seq=%lu n=%d estado=[", (unsigned long)leer32(t + 4), m);
-  for (int i = 0, primero = 1; i < 6; ++i)
+  for (int i = 0, primero = 1; i < 7; ++i)
     if (estado & (1 << i)) w.add(primero ? "%s" : ",%s", ESTADOS[i]), primero = 0;
   w.add("] recortadas=%u atrasadas=%u perdidos=%lu fs=%.1f dc=%u t_us=%lu", leer16(t + 12), leer16(t + 14),
         (unsigned long)leer32(t + 16), leerf(t + 20), leer16(t + 70), (unsigned long)leer32(t + 72));
@@ -906,7 +981,9 @@ void describir_trama(Nodo1& n, const uint8_t* t, bool completa) {
   w.num(leerf(t + 60));
   w.add(" snr=");
   w.num(leerf(t + 64));
-  w.add(" nfft=%u | x=", leer16(t + 68));
+  w.add(" nfft=%u | ciclo pos=", leer16(t + 68));
+  leer32(t + 84) == 0xFFFFFFFFu ? w.add("null") : w.add("%lu", (unsigned long)leer32(t + 84));
+  w.add(" inicio=%d comp=%s ref=%s | x=", (int16_t)leer16(t + 88), NOMBRES_COMP[t[90] & 3], NOMBRES_REF[t[91] & 3]);
   for (int i = 0; i < (completa ? m : std::min(m, 8)); ++i) {
     if (w.n > w.cap - 64) {  // 1024 muestras no caben en salida: se envía por partes
       n.escribir(salida);
@@ -914,8 +991,20 @@ void describir_trama(Nodo1& n, const uint8_t* t, bool completa) {
     }
     w.add(i ? " %d" : "%d", (int16_t)leer16(t + TRAMA_CABECERA + 2 * i));
   }
-  const int largo = TRAMA_CABECERA + 2 * m;
-  w.add("%s | crc=0x%08lx bytes=%d\n", completa ? "" : " ...", (unsigned long)leer32(t + largo), largo + 4);
+  w.add(completa ? "" : " ...");
+  if (con_ref) {
+    w.add(" | r=");
+    for (int i = 0; i < (completa ? m : std::min(m, 8)); ++i) {
+      if (w.n > w.cap - 64) {
+        n.escribir(salida);
+        w.n = 0;
+      }
+      w.add(i ? " %d" : "%d", (int16_t)leer16(t + TRAMA_CABECERA + 2 * (m + i)));
+    }
+    w.add(completa ? "" : " ...");
+  }
+  const int largo = TRAMA_CABECERA + 2 * m * (con_ref ? 2 : 1);
+  w.add(" | crc=0x%08lx bytes=%d\n", (unsigned long)leer32(t + largo), largo + 4);
   n.escribir(salida);
 }
 
@@ -924,6 +1013,256 @@ void describir_trama(Nodo1& n, const uint8_t* t, bool completa) {
 void tramas_conocidas(Nodo1& n, int k) {
   for (int seq = 0; seq < k; ++seq) escribir_trama_hex(n, armar_trama_patron(n, seq));
   responder(n, "OK %d tramas\n", k);
+}
+
+// ============================================================================
+// Sincronización con el emisor y referencia limpia
+// ============================================================================
+
+// 1, 2 y 3 ms del emisor son 16, 32 y 48 muestras; los cortes van a mitad de camino.
+uint8_t clasificar_ancho(uint32_t alto) {
+  if (alto < 8 || alto >= 64) return COMP_NINGUNA;  // no es un pulso del emisor
+  return alto < 24 ? COMP_MEZCLA : alto < 40 ? COMP_LIMPIA : COMP_RUIDO;
+}
+
+// Una muestra del pin del pulso. Devuelve true si en esta muestra empieza un ciclo.
+bool sync_muestra(Sincronia& s, bool nivel) {
+  const bool sube = nivel && !s.nivel;
+  if (s.nivel && !nivel) {
+    s.ancho = s.alto;
+    s.componente = clasificar_ancho(s.alto);
+  }
+  s.nivel = nivel;
+  if (sube) {
+    if (s.hay) s.periodo = s.pos + 1;
+    s.hay = true;
+    s.pos = 0;
+    s.alto = 1;
+    ++s.pulsos;
+    return true;
+  }
+  if (nivel) ++s.alto;
+  if (!s.hay) return false;
+  ++s.pos;
+  // Sin pulsos por más de dos periodos (o 10 s): el emisor está en silencio o se soltó el cable.
+  if (s.pos > std::max<uint32_t>(2 * s.periodo, 160000)) {
+    s.hay = false;
+    s.periodo = 0;
+    s.componente = COMP_NINGUNA;
+  }
+  return false;
+}
+
+// Se perdieron muestras: la posición en el ciclo ya no es confiable hasta el próximo pulso.
+void sync_perdida(Sincronia& s) { s.hay = false; }
+
+uint32_t diferencia(uint32_t a, uint32_t b) { return a > b ? a - b : b - a; }
+
+// La referencia se aplica solo si el emisor sigue con el mismo periodo con que se capturó.
+bool ref_aplica(const Referencia& r, const Sincronia& s) {
+  return r.estado == REF_LISTA && s.hay && s.periodo && diferencia(s.periodo, r.periodo) <= REF_TOLERANCIA;
+}
+
+// Prepara la captura; empieza en el próximo pulso. Devuelve nullptr o el motivo del rechazo.
+const char* ref_iniciar(Referencia& r, const Sincronia& s, int ciclos) {
+  if (!s.hay || !s.periodo) return "no llegan pulsos de sincronizacion (GPIO35)";
+  if (s.componente != COMP_LIMPIA) return "el emisor no esta en comp limpia (pulso de 2 ms)";
+  r.estado = REF_ESPERANDO;
+  r.periodo = s.periodo;
+  r.largo = std::min<uint32_t>(s.periodo, REF_MAX);
+  r.ciclos = ciclos;
+  r.hechos = 0;
+  r.motivo = nullptr;
+  memset(r.datos, 0, r.largo * sizeof(int16_t));
+  return nullptr;
+}
+
+void ref_cancelar(Referencia& r, const char* motivo) {
+  if (r.estado == REF_ESPERANDO || r.estado == REF_CAPTURANDO) {
+    r.estado = REF_VACIA;
+    r.motivo = motivo;
+  }
+}
+
+// Suma una muestra al ciclo; al cerrar el último ciclo divide entre los ciclos y la deja lista.
+// Promediar K ciclos baja el ruido de la sala en la referencia en 10·log10(K) dB.
+EventoRef ref_muestra(Referencia& r, const Sincronia& s, bool inicio, int16_t x) {
+  if (r.estado == REF_ESPERANDO) {
+    if (!inicio) return EV_NADA;
+    r.estado = REF_CAPTURANDO;
+  } else if (r.estado != REF_CAPTURANDO) {
+    return EV_NADA;
+  } else if (inicio) {
+    if (diferencia(s.periodo, r.periodo) > REF_TOLERANCIA) {
+      ref_cancelar(r, "ciclo irregular: el emisor cambio de senal o se perdio un pulso");
+      return EV_CANCELADA;
+    }
+    if (s.componente != COMP_LIMPIA) {
+      ref_cancelar(r, "el emisor dejo de emitir la limpia");
+      return EV_CANCELADA;
+    }
+    if (++r.hechos == r.ciclos) {
+      for (uint32_t i = 0; i < r.largo; ++i) r.datos[i] = (int16_t)lroundf((float)r.datos[i] / r.ciclos);
+      r.estado = REF_LISTA;
+      return EV_LISTA;
+    }
+  }
+  if (s.pos < r.largo) r.datos[s.pos] += x;
+  return EV_NADA;
+}
+
+// Recorre un bloque: sigue el pulso (bits: un bit por muestra, nullptr si no hay pin), captura
+// la referencia y llena ref_out con la referencia de cada muestra (REF_SIN donde no hay).
+// Devuelve true si alguna muestra del bloque tiene referencia.
+bool sync_bloque(Nodo1& n, const uint8_t* bits, const int16_t* x, int m, InfoBloque& b, int16_t* ref_out,
+                 EventoRef& evento) {
+  bool alguna = false;
+  b.inicio_ciclo = -1;
+  for (int i = 0; i < m; ++i) {
+    const bool inicio = bits && sync_muestra(n.sync, bits[i >> 3] >> (i & 7) & 1);
+    if (i == 0) {
+      b.hay_sync = n.sync.hay;
+      b.pos_ciclo = n.sync.pos;
+    }
+    if (inicio && b.inicio_ciclo < 0) b.inicio_ciclo = i;
+    const EventoRef e = ref_muestra(n.ref, n.sync, inicio, x[i]);
+    if (e != EV_NADA) evento = e;
+    const bool vale = ref_aplica(n.ref, n.sync) && n.sync.pos < n.ref.largo;
+    ref_out[i] = vale ? n.ref.datos[n.sync.pos] : REF_SIN;
+    alguna |= vale;
+  }
+  if (!b.hay_sync && n.sync.hay) {  // el primer pulso llegó dentro del bloque
+    b.hay_sync = true;
+    b.pos_ciclo = 0;
+  }
+  b.componente = n.sync.hay ? n.sync.componente : (uint8_t)COMP_NINGUNA;
+  b.ref_estado = n.ref.estado;
+  return alguna;
+}
+
+void mostrar_ref(Nodo1& n) {
+  const Referencia& r = n.ref;
+  const Sincronia& s = n.sync;
+  double suma2 = 0;
+  for (uint32_t i = 0; r.estado == REF_LISTA && i < r.largo; ++i) suma2 += (double)r.datos[i] * r.datos[i];
+  responder(n,
+            "REF {\"estado\":\"%s\",\"aplica\":%s,\"muestras\":%lu,\"ciclos\":%d,\"hechos\":%d,\"periodo_ref\":%lu,"
+            "\"rms_codigos\":%.1f,\"sincronia\":%s,\"periodo_medido\":%lu,\"componente\":\"%s\","
+            "\"ancho_pulso_muestras\":%lu,\"pulsos\":%lu,\"motivo\":%s%s%s}\n",
+            NOMBRES_REF[r.estado], ref_aplica(r, s) ? "true" : "false", (unsigned long)r.largo, r.ciclos, r.hechos,
+            (unsigned long)r.periodo, r.estado == REF_LISTA && r.largo ? sqrt(suma2 / r.largo) : 0.0,
+            s.hay ? "true" : "false", (unsigned long)s.periodo, NOMBRES_COMP[s.componente], (unsigned long)s.ancho,
+            (unsigned long)s.pulsos, r.motivo ? "\"" : "", r.motivo ? r.motivo : "null", r.motivo ? "\"" : "");
+}
+
+void comando_ref(Nodo1& n, const char* a1, const char* a2) {
+  if (!a1) return mostrar_ref(n);
+  if (!strcmp(a1, "borrar")) {
+    n.ref.estado = REF_VACIA;
+    n.ref.motivo = nullptr;
+    return responder(n, "OK referencia borrada\n");
+  }
+  if (strcmp(a1, "capturar")) return responder(n, "ERR use: ref [capturar <ciclos 1..%d> | borrar]\n", REF_K_MAX);
+  const int k = a2 ? atoi(a2) : REF_K_MAX;
+  if (k < 1 || k > REF_K_MAX) return responder(n, "ERR ciclos entre 1 y %d\n", REF_K_MAX);
+  if (const char* motivo = ref_iniciar(n.ref, n.sync, k)) return responder(n, "ERR ref: %s\n", motivo);
+  responder(n, "OK ref esperando el proximo pulso: %d ciclos de %lu muestras\n", k, (unsigned long)n.ref.periodo);
+}
+
+// Verifica la sincronía y la referencia con una señal conocida, sin placa ni emisor:
+// ciclo de P muestras, limpia periódica + "ruido de sala", pulsos de 2 ms mientras se captura la
+// referencia y de 1 ms con la mezcla (limpia + interferencia). Compara la SNR medida con la
+// referencia contra la real, comprueba que desplazar la referencia una muestra empeora el MSE,
+// que la captura se cancela si el pulso no es de la limpia y que la trama lleve la referencia.
+void prueba_ref(Nodo1& n) {
+  constexpr int P = 4000, K = 8, CICLOS = 2 + K + 1 + 4;
+  const Sincronia sync_antes = n.sync;
+  const Referencia ref_antes = n.ref;
+  n.sync = Sincronia{};
+  n.ref.estado = REF_VACIA;
+  uint32_t semilla = 777;
+  auto sala = [&]() {
+    semilla = semilla * 1664525u + 1013904223u;
+    return (int)((semilla >> 16) % 81) - 40;  // ±40 códigos
+  };
+  auto limpia = [](long t) {
+    const double ph = 2 * M_PI * (t % P) / P;
+    return 1200 * sin(5 * ph) + 500 * sin(37 * ph + 0.4);
+  };
+  static int16_t x[BLOQUE_ADC];
+  uint8_t bits[BLOQUE_ADC / 8];
+  double s2 = 0, e2 = 0, d2 = 0, r2 = 0, e_ref2 = 0, n_ref = 0;
+  bool lista = false, trama_ok = true, pedida = false;
+  int tramas_con_ref = 0;
+  Receptor rx;
+  receptor_reiniciar(rx);
+  for (long t0 = 0; t0 < (long)CICLOS * P; t0 += BLOQUE_ADC) {
+    const bool mezcla = lista;
+    memset(bits, 0, sizeof(bits));
+    for (int i = 0; i < BLOQUE_ADC; ++i) {
+      const long t = t0 + i;
+      if (t % P < (mezcla ? 16 : 32)) bits[i >> 3] |= 1 << (i & 7);
+      const double ruido = mezcla ? 700 * sin(2 * M_PI * 2508.0 * t / 16000) : 0;
+      x[i] = (int16_t)lround(limpia(t) + ruido + sala());
+    }
+    InfoBloque b{(uint32_t)(t0 / BLOQUE_ADC), EST_PRUEBA, 0, 0, 0, n.cfg.fs_hz, 0, 0};
+    EventoRef ev = EV_NADA;
+    const bool con_ref = sync_bloque(n, bits, x, BLOQUE_ADC, b, ref_tx, ev);
+    if (!pedida && n.sync.periodo && n.sync.componente == COMP_LIMPIA) pedida = !ref_iniciar(n.ref, n.sync, K);
+    if (ev == EV_LISTA) lista = true;
+    if (mezcla && con_ref) {
+      // Error de la referencia contra la limpia ideal y SNR de entrada medida con ella.
+      for (int i = 0; i < BLOQUE_ADC; ++i) {
+        if (ref_tx[i] == REF_SIN) continue;
+        const long t = t0 + i;
+        const double s = limpia(t), y = x[i] - s;
+        s2 += s * s;
+        e2 += y * y;
+        r2 += (double)ref_tx[i] * ref_tx[i];
+        d2 += (double)(x[i] - ref_tx[i]) * (x[i] - ref_tx[i]);
+        e_ref2 += (ref_tx[i] - s) * (ref_tx[i] - s);
+        ++n_ref;
+      }
+      const int largo = armar_trama(trama_tx, b, x, BLOQUE_ADC, n.diag, n.dsp.N, ref_tx);
+      bool recibida = false;
+      for (int i = 0; i < largo; ++i) recibida |= receptor_byte(rx, trama_tx[i]);
+      trama_ok &= recibida && (leer16(rx.buf + 10) & EST_REF) &&
+                  !memcmp(rx.buf + TRAMA_CABECERA + 2 * BLOQUE_ADC, trama_tx + TRAMA_CABECERA + 2 * BLOQUE_ADC,
+                          2 * BLOQUE_ADC);
+      ++tramas_con_ref;
+    }
+  }
+  // MSE con la referencia desplazada una muestra: debe ser mayor.
+  double d2_desp = 0;
+  for (uint32_t i = 1; lista && i < n.ref.largo; ++i) {
+    const double y = limpia(i) - n.ref.datos[i - 1];
+    d2_desp += y * y;
+  }
+  double d2_bien = 0;
+  for (uint32_t i = 1; lista && i < n.ref.largo; ++i) {
+    const double y = limpia(i) - n.ref.datos[i];
+    d2_bien += y * y;
+  }
+  // Una captura nueva con pulsos de 1 ms (mezcla) debe rechazarse.
+  const char* rechazo = ref_iniciar(n.ref, Sincronia{true, false, 0, 0, P, 16, 1, COMP_MEZCLA}, K);
+  const double snr_real = 10 * log10(s2 / std::max(e2, 1e-9)), snr_medida = 10 * log10(r2 / std::max(d2, 1e-9));
+  const double error_rms = n_ref ? sqrt(e_ref2 / n_ref) : NAN;
+  const bool cumple = lista && fabs(snr_medida - snr_real) < 0.5 && d2_desp > 4 * d2_bien && rechazo && trama_ok &&
+                      tramas_con_ref > 0 && error_rms < 40;
+  responder(n,
+            "OK prueba_ref {\"referencia_lista\":%s,\"muestras_ref\":%lu,\"error_ref_rms_codigos\":%.2f,"
+            "\"ruido_sala_rms_codigos\":%.2f,\"snr_entrada_real_db\":%.3f,\"snr_entrada_medida_db\":%.3f,"
+            "\"mse_desplazada_sobre_alineada\":%.1f,\"rechaza_si_no_es_limpia\":%s,\"tramas_con_ref\":%d,"
+            "\"trama_ref_ok\":%s,\"cumple\":%s}\n",
+            lista ? "true" : "false", (unsigned long)n.ref.largo, error_rms, 40 / sqrt(3.0), snr_real, snr_medida,
+            d2_bien > 0 ? d2_desp / d2_bien : 0.0, rechazo ? "true" : "false", tramas_con_ref,
+            trama_ok ? "true" : "false", cumple ? "true" : "false");
+  n.sync = sync_antes;
+  n.ref = ref_antes;
+  if (ref_antes.estado != REF_VACIA) {  // la prueba usó el mismo búfer: lo guardado ya no vale
+    n.ref.estado = REF_VACIA;
+    n.ref.motivo = "borrada por prueba_ref";
+  }
 }
 
 // ============================================================================
@@ -940,9 +1279,29 @@ void responder(Nodo1& n, const char* fmt, ...) {
 }
 
 bool nodo1_iniciar(Nodo1& n) {
-  if (!iniciar_fft() || !dsp_configurar(n.dsp, n.cfg.n_bloque)) return false;
+  // 64 KB en el heap: como arreglo estático no cabe en el segmento de datos del ESP32.
+  if (!n.ref.datos) n.ref.datos = (int16_t*)reservar(REF_MAX * sizeof(int16_t));
+  if (!n.ref.datos || !iniciar_fft() || !dsp_configurar(n.dsp, n.cfg.n_bloque)) return false;
   dsp_reiniciar_tiempos(n.dsp);
   return true;
+}
+
+// PSD promediada del periodo que se acaba de diagnosticar, en dB (10·log10 de |X|² medio, con
+// las muestras normalizadas a 2048 códigos). La PC solo la grafica: el cálculo es del nodo.
+// Formato: PSD <número de diagnóstico> <resolución en Hz> <N/2+1 valores>.
+void emitir_espectro(Nodo1& n) {
+  const EstadoDsp& e = n.dsp;
+  Escritor w{salida, sizeof(salida), 0};
+  w.add("PSD %lu %g", (unsigned long)n.diag.numero, n.cfg.fs_hz / e.N);
+  for (int k = 0; k <= e.N / 2; ++k) {
+    if (w.n > w.cap - 16) {  // con N = 2048 no cabe en salida: se envía por partes
+      n.escribir(salida);
+      w.n = 0;
+    }
+    w.add(" %.1f", e.db[k]);
+  }
+  w.add("\n");
+  n.escribir(salida);
 }
 
 void emitir_diagnostico(Nodo1& n) {
@@ -953,6 +1312,7 @@ void emitir_diagnostico(Nodo1& n) {
     diagnostico_json(n.diag, w);
     w.add("\n");
     n.escribir(salida);
+    if (n.enviar_espectro) emitir_espectro(n);
   } else {
     responder(n, "ERR sin marcos completos: se necesitan al menos %d muestras\n", n.dsp.N);
   }
@@ -1032,9 +1392,10 @@ void mostrar_tiempos(Nodo1& n) {
 
 void mostrar_memoria(Nodo1& n) {
   Escritor w{salida, sizeof(salida), 0};
-  w.add("MEM {\"n_bloque\":%d,\"bytes_buffers_dsp\":%u,\"bytes_estado_nodo1\":%u,\"bytes_estaticos_diagnostico\":%u",
+  w.add("MEM {\"n_bloque\":%d,\"bytes_buffers_dsp\":%u,\"bytes_estado_nodo1\":%u,\"bytes_estaticos_diagnostico\":%u,"
+        "\"bytes_referencia\":%u",
         n.dsp.N, (unsigned)n.dsp.bytes, (unsigned)sizeof(Nodo1),
-        (unsigned)(sizeof(picos) + sizeof(red) + sizeof(bloque)));
+        (unsigned)(sizeof(picos) + sizeof(red) + sizeof(bloque)), (unsigned)(REF_MAX * sizeof(int16_t)));
   if (n.memoria_plataforma) w.n = std::min(w.cap - 1, w.n + n.memoria_plataforma(salida + w.n, w.cap - w.n));
   w.add("}\n");
   n.escribir(salida);
@@ -1075,14 +1436,18 @@ const char AYUDA[] =
     "  fft_prueba [adc]         FFT_X y FFT_OUT de un vector fijo o del ultimo bloque del ADC\n"
     "  tiempos [reiniciar]      tiempo por etapa y carga de CPU\n"
     "  mem                      memoria usada\n"
+    "  espectro <on|off>        linea PSD (dB) despues de cada DIAG, para graficar en vivo\n"
     "  trama                    ultima trama enviada, legible y con todas sus muestras\n"
     "  prueba_trama             armado y recepcion de 10 tramas con fallas inyectadas\n"
     "  tramas_conocidas <k>     imprime k tramas de prueba en hexadecimal (TRAMA ...)\n"
+    "  ref [capturar <k> | borrar]  referencia limpia: estado, capturar k ciclos (emisor en comp limpia)\n"
+    "  prueba_ref               sincronia y referencia con una senal conocida\n"
 #ifdef ARDUINO
     "  fuente <adc|sint|patron|nada>  origen de las muestras (por defecto adc)\n"
     "  interferencia <hz>       tono interferente de la fuente sint\n"
     "  adc                      estado de la captura: fs medida, perdidas, recortes, UART\n"
     "  tramas <on|off>          envio de tramas por UART2\n"
+    "  tramas_usb <on|off>      copia de cada trama por este puerto USB, para capturar sin adaptador\n"
     "  ver <on|off>             muestra en este monitor cada trama que sale por GPIO17\n"
     "  rx [reiniciar]           tramas recibidas por UART2 (lazo GPIO17 -> GPIO16)\n"
 #endif
@@ -1112,6 +1477,9 @@ void ejecutar(Nodo1& n, char* linea) {
     mostrar_tiempos(n);
   } else if (!strcmp(cmd, "mem")) {
     mostrar_memoria(n);
+  } else if (!strcmp(cmd, "espectro") && a1 && (!strcmp(a1, "on") || !strcmp(a1, "off"))) {
+    n.enviar_espectro = !strcmp(a1, "on");
+    responder(n, "OK espectro %s\n", a1);
   } else if (!strcmp(cmd, "fft_prueba")) {
     prueba_fft(n, a1 && !strcmp(a1, "adc"));
   } else if (!strcmp(cmd, "trama")) {
@@ -1119,6 +1487,10 @@ void ejecutar(Nodo1& n, char* linea) {
     else n.escribir("ERR todavía no se armó ninguna trama\n");
   } else if (!strcmp(cmd, "prueba_trama")) {
     prueba_trama(n);
+  } else if (!strcmp(cmd, "ref")) {
+    comando_ref(n, a1, a2);
+  } else if (!strcmp(cmd, "prueba_ref")) {
+    prueba_ref(n);
   } else if (!strcmp(cmd, "tramas_conocidas") && a1 && atoi(a1) > 0 && atoi(a1) <= 100) {
     tramas_conocidas(n, atoi(a1));
   } else if (!strcmp(cmd, "muestras") && a1 && atol(a1) > 0) {
@@ -1154,7 +1526,7 @@ void nodo1_bytes(Nodo1& n, const uint8_t* b, size_t cuantos) {
         const InfoBloque b{n.seq_trama, EST_PRUEBA, 0, 0, 0, n.cfg.fs_hz, 0, n.seq_trama * 64000u};
         ++n.seq_trama;
         n.llenado_trama = 0;
-        escribir_trama_hex(n, armar_trama(trama_tx, b, muestras_tx, BLOQUE_ADC, n.diag, n.dsp.N));
+        escribir_trama_hex(n, armar_trama(trama_tx, b, muestras_tx, BLOQUE_ADC, n.diag, n.dsp.N, nullptr));
       }
       if (--n.binario_pendiente) continue;
       if (!n.binario_periodico) emitir_diagnostico(n);
@@ -1175,10 +1547,16 @@ void nodo1_bytes(Nodo1& n, const uint8_t* b, size_t cuantos) {
 // ============================================================================
 #ifdef ARDUINO
 
-constexpr int PIN_ADC = 34;                   // ADC1_CH6, solo entrada. ADC2 no: choca con el WiFi
-constexpr adc_channel_t CANAL_ADC = ADC_CHANNEL_6;
+// Entrada del micrófono. GPIO4 es ADC2_CH0: el ADC2 no funciona con el WiFi encendido (el nodo 1
+// no lo usa). Para volver a GPIO34 (ADC1_CH6, solo entrada): PIN_ADC 34, UNIDAD_ADC ADC_UNIT_1,
+// CANAL_ADC ADC_CHANNEL_6. Ojo: GPIO0, 2 y 15 también son ADC2 pero afectan el arranque.
+constexpr int PIN_ADC = 4;
+constexpr adc_unit_t UNIDAD_ADC = ADC_UNIT_2;
+constexpr adc_channel_t CANAL_ADC = ADC_CHANNEL_0;
+static_assert(PIN_ADC != 0 && PIN_ADC != 2 && PIN_ADC != 15 && PIN_ADC != 12, "pin de arranque: no usar para el ADC");
 constexpr int PIN_TRAMA_RX = 16, PIN_TRAMA_TX = 17;  // UART2 hacia los nodos 2 y 3
-constexpr uint32_t BAUDIOS_TRAMA = 921600;    // 2136 B cada 64 ms = 334 kbaud: 36 % de uso
+constexpr int PIN_SYNC = 35;                  // pulso del emisor (su GPIO27); solo entrada, sin pull interno
+constexpr uint32_t BAUDIOS_TRAMA = 921600;    // 2144 B cada 64 ms = 335 kbaud (36 %); con referencia 4192 B (71 %)
 constexpr uint32_t FS_ADC = 16000;
 constexpr uint32_t RELOJ_TIMER_HZ = 2000000;  // 2 MHz / 125 = 16 kHz exactos (62.5 us)
 constexpr float TOLERANCIA_FS = 0.005f;
@@ -1190,14 +1568,29 @@ static adc_cali_handle_t adc_cali;            // nullptr si no se pudo calibrar
 static TaskHandle_t tarea_adc_h;
 static QueueHandle_t cola_bloques;
 static uint16_t buf_adc[2][BLOQUE_ADC];
+static uint8_t buf_sync[2][BLOQUE_ADC / 8];    // nivel del pin del pulso, un bit por muestra
 static std::atomic<bool> ocupado[2];          // true mientras loop() procesa ese búfer
 static std::atomic<uint32_t> adc_seq, adc_perdidos, adc_atrasadas, adc_recortadas;
 static std::atomic<int32_t> adc_lectura_max_us;
+static std::atomic<uint32_t> adc_fallidas;      // lecturas del ADC que devolvieron error
+// Retardo entre la alarma del temporizador y la lectura del ADC. Su variación es el jitter del
+// instante de muestreo: 1 µs de jitter limita la SNR a ≈ 36 dB en 2508 Hz. Resolución: 1 µs.
+static volatile uint32_t t_alarma_us;         // la escribe la ISR (32 bits: escritura atómica)
+struct Jitter {
+  uint32_t n, max_us;
+  uint64_t suma, suma2;
+};
+static Jitter jitter_publicado;               // copia que lee loop(), bajo mux_jitter
+static portMUX_TYPE mux_jitter = portMUX_INITIALIZER_UNLOCKED;
+static std::atomic<bool> jitter_reiniciar;
 
 // Consumidor (loop): procesa, diagnostica y envía.
 static Fuente fuente = FUENTE_ADC;
 static bool tramas_activas = true;
 static bool ver_tramas = false;               // eco legible de cada trama en la consola USB
+static bool tramas_usb = false;               // copia binaria de cada trama por la consola USB
+static uint32_t tramas_usb_enviadas, tramas_usb_descartadas;
+static int ultimo_largo = TRAMA_CABECERA + 2 * BLOQUE_ADC + 4;
 static size_t bytes_iniciar;                  // heap consumido por esp-dsp y los buffers
 static float f_interferencia_hz = 2500;
 static uint32_t seq_prueba, generadas, diag_enviado, perdidos_previos;
@@ -1216,7 +1609,11 @@ static float bloque_f[BLOQUE_ADC];
 static Receptor receptor_uart;
 static uint32_t rx_patron_ok, rx_patron_mal;
 
-void ARDUINO_ISR_ATTR al_muestrear() {
+// IRAM_ATTR y no ARDUINO_ISR_ATTR: en el núcleo 3.x este último no ubica la función en IRAM
+// salvo que se active CONFIG_ARDUINO_ISR_IRAM, y desde la flash cada fallo de caché atrasa la
+// interrupción y agrega jitter al instante de muestreo.
+void IRAM_ATTR al_muestrear() {
+  t_alarma_us = (uint32_t)esp_timer_get_time();
   BaseType_t despertar = pdFALSE;
   vTaskNotifyGiveFromISR(tarea_adc_h, &despertar);
   if (despertar) portYIELD_FROM_ISR();
@@ -1227,11 +1624,19 @@ void ARDUINO_ISR_ATTR al_muestrear() {
 void tarea_adc(void*) {
   int activo = 0, idx = 0;
   uint16_t recortadas = 0, atrasadas = 0;
+  Jitter j{};
   for (;;) {
     const uint32_t pendientes = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
     const int64_t t0 = esp_timer_get_time();
-    int raw = 0;
-    adc_oneshot_read(adc_unidad, CANAL_ADC, &raw);
+    const uint32_t retardo = (uint32_t)t0 - t_alarma_us;  // µs desde la última alarma
+    if (jitter_reiniciar.exchange(false)) j = Jitter{};
+    ++j.n;
+    j.suma += retardo;
+    j.suma2 += (uint64_t)retardo * retardo;
+    j.max_us = std::max(j.max_us, retardo);
+    static int raw = 2048;  // si una lectura del ADC2 falla, se repite la anterior y se cuenta
+    if (adc_oneshot_read(adc_unidad, CANAL_ADC, &raw) != ESP_OK) ++adc_fallidas;
+    const bool pulso = gpio_ll_get_level(&GPIO, PIN_SYNC);  // mismo instante que la muestra
     const int32_t dt = esp_timer_get_time() - t0;
     if (dt > adc_lectura_max_us) adc_lectura_max_us = dt;
     if (pendientes > 1) {
@@ -1243,9 +1648,15 @@ void tarea_adc(void*) {
         ++recortadas;
         ++adc_recortadas;
       }
+      const uint8_t bit = 1 << (idx & 7);
+      uint8_t& byte = buf_sync[activo][idx >> 3];
+      byte = pulso ? byte | bit : byte & ~bit;
       buf_adc[activo][idx++] = raw;
       if (idx < BLOQUE_ADC) continue;
       idx = 0;
+      portENTER_CRITICAL(&mux_jitter);
+      jitter_publicado = j;
+      portEXIT_CRITICAL(&mux_jitter);
       const Bloque b{activo, adc_seq++, adc_perdidos, recortadas, atrasadas, esp_timer_get_time()};
       recortadas = atrasadas = 0;
       const int otro = 1 - activo;
@@ -1262,14 +1673,14 @@ void tarea_adc(void*) {
 
 bool iniciar_adc() {
   adc_oneshot_unit_init_cfg_t unidad = {};
-  unidad.unit_id = ADC_UNIT_1;
+  unidad.unit_id = UNIDAD_ADC;
   if (adc_oneshot_new_unit(&unidad, &adc_unidad) != ESP_OK) return false;
   adc_oneshot_chan_cfg_t canal = {};
   canal.atten = ADC_ATTEN_DB_12;  // atenuación alta: rango útil ~0.15-2.45 V
   canal.bitwidth = ADC_BITWIDTH_12;
   if (adc_oneshot_config_channel(adc_unidad, CANAL_ADC, &canal) != ESP_OK) return false;
   adc_cali_line_fitting_config_t cali = {};
-  cali.unit_id = ADC_UNIT_1;
+  cali.unit_id = UNIDAD_ADC;
   cali.atten = ADC_ATTEN_DB_12;
   cali.bitwidth = ADC_BITWIDTH_12;
 #if CONFIG_IDF_TARGET_ESP32
@@ -1294,8 +1705,9 @@ void reiniciar_medicion_fs() {
   dc_adc = -1;
 }
 
-// Camino común de todas las fuentes: DC, fs medida, diagnóstico y trama.
-void procesar_bloque(const uint16_t* codigos, InfoBloque b, int64_t t_us) {
+// Camino común de todas las fuentes: DC, fs medida, diagnóstico, referencia y trama.
+// bits: nivel del pin del pulso por muestra (solo con el ADC; nullptr con las fuentes de prueba).
+void procesar_bloque(const uint16_t* codigos, const uint8_t* bits, InfoBloque b, int64_t t_us) {
   if (nodo.binario_pendiente) return;  // una carga de "muestras" usa muestras_tx y el diagnóstico
   const int64_t inicio = esp_timer_get_time();
   // fs = muestras tomadas (por secuencia, incluye bloques perdidos) / tiempo de esp_timer.
@@ -1310,7 +1722,12 @@ void procesar_bloque(const uint16_t* codigos, InfoBloque b, int64_t t_us) {
   if (fs_medida > 0 && fabsf(fs_medida - FS_ADC) > TOLERANCIA_FS * FS_ADC) b.estado |= EST_FS_FUERA;
   if (b.recortadas) b.estado |= EST_RECORTE;
   if (b.atrasadas) b.estado |= EST_ATRASO;
-  if (b.perdidos != perdidos_previos) b.estado |= EST_PERDIDA;
+  if (b.perdidos != perdidos_previos) {
+    b.estado |= EST_PERDIDA;
+    // Faltan muestras: la posición en el ciclo se recupera en el próximo pulso.
+    sync_perdida(nodo.sync);
+    ref_cancelar(nodo.ref, "se perdieron bloques durante la captura");
+  }
   perdidos_previos = b.perdidos;
   if (fuente != FUENTE_ADC) b.estado |= EST_PRUEBA;
   b.t_us = (uint32_t)t_us;
@@ -1335,13 +1752,24 @@ void procesar_bloque(const uint16_t* codigos, InfoBloque b, int64_t t_us) {
     nodo.muestras_totales = b.seq * BLOQUE_ADC;  // los bloques perdidos no corren el índice
     nodo1_alimentar(nodo, bloque_f, BLOQUE_ADC);
   }
+  EventoRef evento = EV_NADA;
+  bool con_ref = false;
+  if (fuente == FUENTE_ADC) {
+    con_ref = sync_bloque(nodo, bits, muestras_tx, BLOQUE_ADC, b, ref_tx, evento);
+  } else {
+    b.componente = COMP_NINGUNA;
+    b.ref_estado = nodo.ref.estado;
+  }
+  if (evento == EV_LISTA) mostrar_ref(nodo);
+  if (evento == EV_CANCELADA) responder(nodo, "ERR ref cancelada: %s\n", nodo.ref.motivo);
   if (nodo.diag.numero != diag_enviado) {
     b.estado |= EST_DIAG_NUEVO;
     diag_enviado = nodo.diag.numero;
   }
   if (tramas_activas) {
     const int64_t t0 = esp_timer_get_time();
-    const int largo = armar_trama(trama_tx, b, muestras_tx, BLOQUE_ADC, nodo.diag, nodo.dsp.N);
+    const int largo = armar_trama(trama_tx, b, muestras_tx, BLOQUE_ADC, nodo.diag, nodo.dsp.N, con_ref ? ref_tx : nullptr);
+    ultimo_largo = largo;
     armado_max_us = std::max<int32_t>(armado_max_us, esp_timer_get_time() - t0);
     if (Serial2.availableForWrite() < largo) {  // la UART no da abasto: se descarta y el receptor ve el salto
       ++tramas_descartadas;
@@ -1349,6 +1777,16 @@ void procesar_bloque(const uint16_t* codigos, InfoBloque b, int64_t t_us) {
       Serial2.write(trama_tx, largo);
       ++tramas_enviadas;
       if (ver_tramas) describir_trama(nodo, trama_tx, false);
+    }
+    // Copia por USB para capturar sin adaptador. El texto de la consola queda entre tramas y el
+    // receptor lo descarta: busca el delimitador y valida el CRC.
+    if (tramas_usb) {
+      if (Serial.availableForWrite() < largo) {
+        ++tramas_usb_descartadas;
+      } else {
+        Serial.write(trama_tx, largo);
+        ++tramas_usb_enviadas;
+      }
     }
   }
   const uint32_t dt = esp_timer_get_time() - inicio;
@@ -1361,7 +1799,7 @@ void consumir_adc() {
   Bloque bq;
   while (xQueueReceive(cola_bloques, &bq, 0) == pdTRUE) {
     if (fuente == FUENTE_ADC)
-      procesar_bloque(buf_adc[bq.idx], InfoBloque{bq.seq, 0, bq.recortadas, bq.atrasadas, bq.perdidos, 0, 0, 0},
+      procesar_bloque(buf_adc[bq.idx], buf_sync[bq.idx], InfoBloque{bq.seq, 0, bq.recortadas, bq.atrasadas, bq.perdidos, 0, 0, 0},
                       bq.t_us);
     ocupado[bq.idx] = false;  // libera el búfer para la tarea del ADC
   }
@@ -1378,7 +1816,7 @@ void avanzar_fuente_prueba() {
       codigos_sint[i] = (uint16_t)std::min(4095L, std::max(0L, lroundf(2048 + 700 * x)));
     }
     generadas += BLOQUE_ADC;
-    procesar_bloque(codigos_sint, InfoBloque{seq_prueba++, 0, 0, 0, 0, 0, 0, 0},
+    procesar_bloque(codigos_sint, nullptr, InfoBloque{seq_prueba++, 0, 0, 0, 0, 0, 0, 0},
                     t_fuente_us + (int64_t)generadas * 1000000 / FS_ADC);
   }
 }
@@ -1412,16 +1850,23 @@ int milivoltios(int codigo) {
 // ganancia del micrófono mirando solo el último intervalo.
 void mostrar_adc() {
   static const char* const NOMBRES[] = {"adc", "sint", "patron", "nada"};
-  const int largo = TRAMA_CABECERA + 2 * BLOQUE_ADC + 4;
+  const int largo = ultimo_largo;  // con referencia la trama mide el doble
   const float bytes_s = largo * (float)FS_ADC / BLOQUE_ADC;
   const float envio_ms = 1000.0f * largo * 10 / BAUDIOS_TRAMA;
   const int dc = dc_adc < 0 ? 0 : (int)lroundf(dc_adc);
+  portENTER_CRITICAL(&mux_jitter);
+  const Jitter j = jitter_publicado;
+  portEXIT_CRITICAL(&mux_jitter);
+  const double media_j = j.n ? (double)j.suma / j.n : 0;
+  const double desv_j = j.n ? sqrt(std::max(0.0, (double)j.suma2 / j.n - media_j * media_j)) : 0;
   Serial.printf("ADC {\"fuente\":\"%s\",\"fs_nominal_hz\":%lu,\"fs_medida_hz\":%.3f,\"bloques\":%lu,"
                 "\"bloques_perdidos\":%lu,\"muestras_atrasadas\":%lu,\"muestras_recortadas\":%lu,"
                 "\"lectura_max_us\":%ld,\"dc_codigo\":%lu,\"dc_mv\":%d,\"codigo_min\":%u,\"codigo_max\":%u,"
                 "\"min_mv\":%d,\"max_mv\":%d,\"calibrado\":%s,\"proceso_medio_us\":%lu,\"proceso_max_us\":%lu,"
                 "\"latencia_bloque_ms\":%.1f,\"tramas_enviadas\":%lu,\"tramas_descartadas\":%lu,"
-                "\"armado_max_us\":%ld,\"baudios\":%lu,\"uso_uart_pct\":%.1f}\n",
+                "\"armado_max_us\":%ld,\"baudios\":%lu,\"uso_uart_pct\":%.1f,"
+                "\"retardo_lectura_medio_us\":%.2f,\"jitter_muestreo_us\":%.2f,\"retardo_lectura_max_us\":%lu,"
+                "\"lecturas_fallidas\":%lu,\"pin_adc\":%d,\"bytes_por_trama\":%d,\"tramas_usb\":%s,\"tramas_usb_enviadas\":%lu,\"tramas_usb_descartadas\":%lu}\n",
                 NOMBRES[fuente], (unsigned long)FS_ADC, fs_medida, (unsigned long)adc_seq.load(),
                 (unsigned long)adc_perdidos.load(), (unsigned long)adc_atrasadas.load(),
                 (unsigned long)adc_recortadas.load(), (long)adc_lectura_max_us.load(), (unsigned long)dc,
@@ -1431,7 +1876,9 @@ void mostrar_adc() {
                 // llenado del bloque + peor procesamiento + salida completa de la trama por la UART
                 1000.0f * BLOQUE_ADC / FS_ADC + proc_max_us / 1000.0f + envio_ms, (unsigned long)tramas_enviadas,
                 (unsigned long)tramas_descartadas, (long)armado_max_us, (unsigned long)BAUDIOS_TRAMA,
-                100 * bytes_s * 10 / BAUDIOS_TRAMA);
+                100 * bytes_s * 10 / BAUDIOS_TRAMA, media_j, desv_j, (unsigned long)j.max_us, (unsigned long)adc_fallidas.load(), PIN_ADC, largo,
+                tramas_usb ? "true" : "false", (unsigned long)tramas_usb_enviadas, (unsigned long)tramas_usb_descartadas);
+  jitter_reiniciar = true;  // como el mín./máx.: cada consulta mide el intervalo desde la anterior
   codigo_min = 4095;
   codigo_max = 0;
 }
@@ -1459,6 +1906,12 @@ bool comando_esp(const char* cmd, const char* arg) {
   } else if (!strcmp(cmd, "tramas") && arg) {
     tramas_activas = !strcmp(arg, "on");
     Serial.printf("OK tramas %s\n", tramas_activas ? "on" : "off");
+  } else if (!strcmp(cmd, "tramas_usb") && arg) {
+    // Se responde antes de activar: el OK no queda detrás de tramas binarias.
+    Serial.printf("OK tramas_usb %s\n", !strcmp(arg, "on") ? "on" : "off");
+    Serial.flush();
+    tramas_usb = !strcmp(arg, "on");
+    tramas_usb_enviadas = tramas_usb_descartadas = 0;
   } else if (!strcmp(cmd, "rx")) {
     if (arg && !strcmp(arg, "reiniciar")) receptor_reiniciar(receptor_uart), rx_patron_ok = rx_patron_mal = 0;
     Serial.printf("RX {\"validas\":%lu,\"errores_crc\":%lu,\"perdidas\":%lu,\"bytes_descartados\":%lu,"
@@ -1474,11 +1927,13 @@ bool comando_esp(const char* cmd, const char* arg) {
 
 void setup() {
   Serial.setRxBufferSize(8192);  // la carga binaria de "muestras" llega en ráfagas
-  Serial.setTxBufferSize(8192);  // un DIAG (hasta ~6 KB) sale sin detener loop() ni el doble búfer
+  Serial.setTxBufferSize(16384); // un DIAG (hasta ~6 KB) y, con tramas_usb, dos tramas con referencia
   Serial.begin(921600);          // consola por el puente USB-UART (CP2102/CH340)
-  Serial2.setTxBufferSize(4096); // una trama completa sin bloquear loop()
+  Serial2.setTxBufferSize(8192); // una trama con referencia (4192 B) sin bloquear loop()
   Serial2.setRxBufferSize(8192);
   Serial2.begin(BAUDIOS_TRAMA, SERIAL_8N1, PIN_TRAMA_RX, PIN_TRAMA_TX);
+  // GPIO35 no tiene pull interno: sin el cable del emisor conviene 100 kΩ a GND para que no flote.
+  pinMode(PIN_SYNC, INPUT);
   delay(1000);
   nodo.escribir = escribir_serial;
   nodo.memoria_plataforma = memoria_esp;
@@ -1495,7 +1950,7 @@ void setup() {
     Serial.println("ERR no se pudo iniciar el ADC, la tarea o el temporizador");
     while (true) delay(1000);
   }
-  Serial.println("OK nodo 1 listo: micrófono en GPIO34 a 16 kHz, tramas por GPIO17; '?' muestra comandos");
+  Serial.printf("OK nodo 1 listo: micrófono en GPIO%d a 16 kHz, pulso del emisor en GPIO35, tramas por GPIO17; '?' muestra comandos\n", PIN_ADC);
 }
 
 void loop() {
