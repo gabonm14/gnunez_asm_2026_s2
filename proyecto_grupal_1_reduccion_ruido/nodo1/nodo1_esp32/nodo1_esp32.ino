@@ -61,9 +61,9 @@ struct ConfigNodo1 {
   float fs_hz = 16000;
   int n_bloque = 1024;
   float periodo_diag_ms = 1000;   // pipeline.json: segundos_diagnostico
-  float umbral_ocupacion_db = 40;
+  float umbral_ocupacion_db = 30;   // 40 en la simulación original; 30 por el hardware (docs/nodo1_verificacion.md)
   int hueco_fusion_bins = 3;
-  float ancho_linea_hz = 100;
+  float ancho_linea_hz = 125;       // 100 en la simulación original; un tono fuera de bin mide ~109 Hz a −40 dB
   float ancho_dc_hz = 100;
   float hueco_util_hz = 1000;
   float margen_banda_util_hz = 100;

@@ -204,6 +204,22 @@ En todos los pasos, durante la captura:
 | Atenuación del alias | 9 |
 | Jitter del muestreo, carga de CPU, memoria y latencia | `adc`, `tiempos`, `mem` |
 
+## Ajuste del diagnóstico al hardware
+
+Medido con el montaje final (parlante, MAX4466, ESP32): el canal agrega frecuencias que no se insertaron (intermodulación del parlante y de los convertidores, por ejemplo 2508 ± 440 Hz en P1) unos 35 dB bajo el componente más fuerte, y el ADC tiene tonos espurios propios. Con `umbral_ocupacion_db` = 40 el diagnóstico los reportaba como interferencias. Además, a la salida del parlante el tono de 2508 Hz es el componente más fuerte y, por caer entre dos bins, su lóbulo con Hann mide ≈ 109 Hz a −40 dB, más que el `ancho_linea_hz` de 100 Hz: salía como "banda".
+
+| Parámetro (`metadatos/diagnostico.json` y valores por defecto del nodo 1) | Antes | Ahora |
+|---|---|---|
+| `umbral_ocupacion_db` | 40 | 30 |
+| `ancho_linea_hz` | 100 | 125 |
+
+| Efecto | Resultado |
+|---|---|
+| Capturas reales, mezcla | P1: tonal en 2508 Hz (antes: 2068, 2948, 3696 y 4268 Hz); P2: banda ≈ 2400–4000 Hz (antes casi siempre "nada"); P4: impulsivo (igual) |
+| Capturas reales, limpia | Sin interferencias falsas en P1 y P2 |
+| Simulación (`src/diagnostico.py`) | Mismos aciertos de tipo en todo el barrido y en P6; error de borde de banda de 186/131/85 Hz a 85/30/64 Hz; `caso_5` pasa de "indeterminado" a "banda" 1422–7531 Hz (real 2000–7500) |
+| Pipeline y pruebas | Métricas del pipeline sin cambios; 61/61 pruebas; nodo 1 igual a Python 21/21 |
+
 ## Decisiones pendientes del equipo
 
 | Decisión | Detalle |

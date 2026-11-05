@@ -4,36 +4,36 @@
     "n_bloque": 1024,
     "dc_ventana": {
       "n": 644,
-      "media_us": 0.8,
-      "max_us": 4,
-      "ultimo_us": 1
+      "media_us": 2.4,
+      "max_us": 12,
+      "ultimo_us": 2
     },
     "fft": {
       "n": 644,
-      "media_us": 18.2,
-      "max_us": 26,
-      "ultimo_us": 17
+      "media_us": 52.8,
+      "max_us": 193,
+      "ultimo_us": 45
     },
     "psd": {
       "n": 644,
-      "media_us": 0.3,
-      "max_us": 8,
+      "media_us": 0.7,
+      "max_us": 13,
       "ultimo_us": 1
     },
     "impulsos": {
       "n": 343,
-      "media_us": 14.2,
-      "max_us": 23,
-      "ultimo_us": 16
+      "media_us": 38.6,
+      "max_us": 70,
+      "ultimo_us": 41
     },
     "diagnostico": {
       "n": 21,
-      "media_us": 5.8,
-      "max_us": 12,
-      "ultimo_us": 5
+      "media_us": 17.0,
+      "max_us": 28,
+      "ultimo_us": 13
     },
     "presupuesto_marco_us": 32000,
-    "carga_cpu_pct": 0.08,
+    "carga_cpu_pct": 0.24,
     "latencia_diagnostico_ms": 1000.0
   },
   "memoria": {

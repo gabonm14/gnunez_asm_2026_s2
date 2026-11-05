@@ -1,7 +1,7 @@
 {
-  "umbral_ocupacion_db": 40,
+  "umbral_ocupacion_db": 30,
   "hueco_fusion_bins": 3,
-  "ancho_linea_hz": 100,
+  "ancho_linea_hz": 125,
   "ancho_dc_hz": 100,
   "hueco_util_hz": 1000,
   "margen_banda_util_hz": 100,
