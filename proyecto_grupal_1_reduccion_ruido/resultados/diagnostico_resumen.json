@@ -8,6 +8,7 @@
     "margen_banda_util_hz": 100,
     "umbral_curtosis": 20,
     "k_atipicas_mad": 8,
+    "separacion_impulsos_ms": 30,
     "frecuencias_red_hz": [
       50,
       60
@@ -172,7 +173,7 @@
           "tipo": "linea"
         }
       ],
-      "tiempo_calculo_ms": 13.746122000156902
+      "tiempo_calculo_ms": 5.0884459997178055
     },
     "caso_2": {
       "tipo": "banda",
@@ -246,7 +247,7 @@
           "tipo": "banda"
         }
       ],
-      "tiempo_calculo_ms": 12.452924998797243
+      "tiempo_calculo_ms": 5.212107000261312
     },
     "caso_3": {
       "tipo": "banda",
@@ -292,7 +293,7 @@
         }
       ],
       "interferencias": [],
-      "tiempo_calculo_ms": 9.795252000913024
+      "tiempo_calculo_ms": 5.065743000159273
     },
     "caso_5": {
       "tipo": "banda",
@@ -338,7 +339,7 @@
         }
       ],
       "interferencias": [],
-      "tiempo_calculo_ms": 11.325786999805132
+      "tiempo_calculo_ms": 5.917017000228952
     },
     "caso_6": {
       "tipo": "impulsivo",
@@ -356,7 +357,7 @@
       "motivo": "ruido impulsivo: espectro plano, la banda \u00fatil no es observable",
       "snr_estimada_db": null,
       "curtosis_diferencia": 1577.840325097905,
-      "impulsos_por_s_estimados": 4.833333333333333,
+      "impulsos_por_s_estimados": 4.333333333333333,
       "regiones": [
         {
           "f_lo_hz": 31.25,
@@ -369,7 +370,7 @@
         }
       ],
       "interferencias": [],
-      "tiempo_calculo_ms": 7.225839999591699
+      "tiempo_calculo_ms": 3.7332110000534158
     },
     "caso_7": {
       "tipo": "tonal",
@@ -424,7 +425,7 @@
           "tipo": "linea"
         }
       ],
-      "tiempo_calculo_ms": 8.464238999295048
+      "tiempo_calculo_ms": 4.307575999973778
     }
   }
 }

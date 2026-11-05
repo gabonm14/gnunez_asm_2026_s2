@@ -46,11 +46,14 @@ def psd_promediada(x, N):
     return P / marcos
 
 
-def medir_impulsividad(x, fs, k_mad):
+def medir_impulsividad(x, fs, k_mad, separacion_ms=0):
     """Curtosis en exceso y tasa de eventos atípicos de la primera diferencia.
 
     La diferencia realza los impulsos frente a tonos y bandas, que dan curtosis ~0 o
-    negativa. Un evento es un grupo de muestras consecutivas sobre k_mad desviaciones.
+    negativa. Un evento es un grupo de muestras sobre k_mad desviaciones; las atípicas a
+    menos de separacion_ms de la anterior son el mismo evento. Con 0, solo se agrupan las
+    consecutivas. A la salida de un parlante cada clic oscila unos milisegundos, y sin esa
+    separación cada oscilación contaría como un impulso aparte.
     """
     x = np.asarray(x, dtype=np.float64)
     d = np.diff(x - x.mean())
@@ -58,8 +61,9 @@ def medir_impulsividad(x, fs, k_mad):
     mad = np.median(np.abs(d)) / 0.6745
     m2 = np.mean(d ** 2)
     curtosis = float(np.mean(d ** 4) / m2 ** 2 - 3) if m2 > 0 else 0.0
-    atipica = np.abs(d) > k_mad * max(mad, np.finfo(float).tiny)
-    eventos = int(np.count_nonzero(atipica[1:] & ~atipica[:-1]) + atipica[0])
+    atipica = np.flatnonzero(np.abs(d) > k_mad * max(mad, np.finfo(float).tiny))
+    separacion = max(1, int(round(separacion_ms * fs / 1000)))
+    eventos = int(len(atipica) > 0) + int(np.count_nonzero(np.diff(atipica) > separacion))
     return curtosis, eventos / (len(x) / fs)
 
 
@@ -122,7 +126,7 @@ def diagnosticar(x, fs, N, cfg):
     rel = db - db.max()
     mascara = rel > -cfg['umbral_ocupacion_db']
     mascara[:2] = False  # DC y su fuga: la media ya se eliminó.
-    curtosis, tasa = medir_impulsividad(x, fs, cfg['k_atipicas_mad'])
+    curtosis, tasa = medir_impulsividad(x, fs, cfg['k_atipicas_mad'], cfg.get('separacion_impulsos_ms', 0))
     impulsivo = curtosis > cfg['umbral_curtosis']
 
     # Los armónicos de red se retiran de la máscara (con sus lóbulos) antes de formar regiones.

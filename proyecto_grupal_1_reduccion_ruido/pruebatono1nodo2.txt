@@ -1,0 +1,86 @@
+bytes 17152 | tramas validas 8 (total 1682) | CRC malo 0 | perdidas 0
+   seq 9414 | estado 0x00 | diagnostico #602 tipos [tonal] lineas [2508.0, 3387.9] Hz | banda nan-nan Hz | muestras: 224 82 -255 -402 -252 -37 174 100
+bytes 17152 | tramas validas 8 (total 1690) | CRC malo 0 | perdidas 0
+   seq 9422 | estado 0x00 | diagnostico #603 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: 142 -114 -309 -259 -70 240 283 94
+bytes 17152 | tramas validas 8 (total 1698) | CRC malo 0 | perdidas 0
+   seq 9430 | estado 0x00 | diagnostico #603 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: 167 -135 -195 19 311 382 215 -77
+bytes 17152 | tramas validas 8 (total 1706) | CRC malo 0 | perdidas 0
+   seq 9438 | estado 0x00 | diagnostico #604 tipos [tonal] lineas [2508.0, 3387.7] Hz | banda nan-nan Hz | muestras: -113 -261 -181 59 237 155 -69 -353
+bytes 17152 | tramas validas 8 (total 1714) | CRC malo 0 | perdidas 0
+   seq 9446 | estado 0x00 | diagnostico #604 tipos [tonal] lineas [2508.0, 3387.7] Hz | banda nan-nan Hz | muestras: -340 -371 -157 129 160 12 -274 -363
+bytes 17152 | tramas validas 8 (total 1722) | CRC malo 0 | perdidas 0
+   seq 9454 | estado 0x00 | diagnostico #605 tipos [tonal] lineas [2508.0, 3387.9] Hz | banda nan-nan Hz | muestras: -274 -127 185 352 239 0 -227 -144
+bytes 17152 | tramas validas 8 (total 1730) | CRC malo 0 | perdidas 0
+   seq 9462 | estado 0x00 | diagnostico #605 tipos [tonal] lineas [2508.0, 3387.9] Hz | banda nan-nan Hz | muestras: -132 165 351 280 27 -192 -246 -82
+bytes 17152 | tramas validas 8 (total 1738) | CRC malo 0 | perdidas 0
+   seq 9470 | estado 0x00 | diagnostico #606 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: -146 151 222 33 -316 -417 -281 14
+bytes 17152 | tramas validas 8 (total 1746) | CRC malo 0 | perdidas 0
+   seq 9478 | estado 0x00 | diagnostico #606 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: 84 190 142 -129 -313 -273 -18 255
+bytes 17152 | tramas validas 8 (total 1754) | CRC malo 0 | perdidas 0
+   seq 9486 | estado 0x00 | diagnostico #607 tipos [tonal] lineas [2508.0, 3387.9, 5492.0] Hz | banda nan-nan Hz | muestras: 343 345 107 -131 -195 27 323 350
+bytes 17152 | tramas validas 8 (total 1762) | CRC malo 0 | perdidas 0
+   seq 9494 | estado 0x00 | diagnostico #607 tipos [tonal] lineas [2508.0, 3387.9, 5492.0] Hz | banda nan-nan Hz | muestras: 329 191 -98 -258 -195 78 223 161
+bytes 17152 | tramas validas 8 (total 1770) | CRC malo 0 | perdidas 0
+   seq 9502 | estado 0x00 | diagnostico #608 tipos [tonal] lineas [2508.0, 3387.8, 5491.6] Hz | banda nan-nan Hz | muestras: 152 -166 -381 -341 -159 123 152 -23
+bytes 17152 | tramas validas 8 (total 1778) | CRC malo 0 | perdidas 0
+   seq 9510 | estado 0x00 | diagnostico #608 tipos [tonal] lineas [2508.0, 3387.8, 5491.6] Hz | banda nan-nan Hz | muestras: 76 -198 -258 -94 224 347 229 -33
+bytes 17152 | tramas validas 8 (total 1786) | CRC malo 0 | perdidas 0
+   seq 9518 | estado 0x00 | diagnostico #609 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: -81 -206 -114 187 365 279 37 -227
+bytes 17152 | tramas validas 8 (total 1794) | CRC malo 0 | perdidas 0
+   seq 9526 | estado 0x00 | diagnostico #609 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: -247 -306 -99 173 180 10 -304 -409
+bytes 17152 | tramas validas 8 (total 1802) | CRC malo 0 | perdidas 0
+   seq 9534 | estado 0x00 | diagnostico #610 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: -392 -248 56 205 104 -175 -295 -228
+bytes 17152 | tramas validas 8 (total 1810) | CRC malo 0 | perdidas 0
+   seq 9542 | estado 0x00 | diagnostico #610 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: -162 126 376 325 64 -146 -197 42
+bytes 17152 | tramas validas 8 (total 1818) | CRC malo 0 | perdidas 0
+   seq 9550 | estado 0x00 | diagnostico #611 tipos [tonal] lineas [2508.0, 3387.9, 5491.7] Hz | banda nan-nan Hz | muestras: 53 242 307 131 -168 -307 -227 57
+bytes 17152 | tramas validas 8 (total 1826) | CRC malo 0 | perdidas 0
+   seq 9558 | estado 0x00 | diagnostico #611 tipos [tonal] lineas [2508.0, 3387.9, 5491.7] Hz | banda nan-nan Hz | muestras: 90 207 111 -197 -384 -366 -129 142
+bytes 17152 | tramas validas 8 (total 1834) | CRC malo 0 | perdidas 0
+   seq 9566 | estado 0x00 | diagnostico #612 tipos [tonal] lineas [2508.0, 3387.9, 5493.1] Hz | banda nan-nan Hz | muestras: 211 221 37 -203 -238 -47 218 364
+bytes 17152 | tramas validas 8 (total 1842) | CRC malo 0 | perdidas 0
+   seq 9574 | estado 0x00 | diagnostico #612 tipos [tonal] lineas [2508.0, 3387.9, 5493.1] Hz | banda nan-nan Hz | muestras: 400 222 -82 -211 -125 174 334 225
+bytes 17152 | tramas validas 8 (total 1850) | CRC malo 0 | perdidas 0
+   seq 9582 | estado 0x00 | diagnostico #613 tipos [tonal] lineas [2508.0, 3388.0] Hz | banda nan-nan Hz | muestras: 251 -28 -303 -299 -65 153 181 -18
+bytes 17152 | tramas validas 8 (total 1858) | CRC malo 0 | perdidas 0
+   seq 9590 | estado 0x00 | diagnostico #613 tipos [tonal] lineas [2508.0, 3388.0] Hz | banda nan-nan Hz | muestras: -92 -300 -390 -209 88 206 109 -168
+bytes 17152 | tramas validas 8 (total 1866) | CRC malo 0 | perdidas 0
+   seq 9598 | estado 0x00 | diagnostico #614 tipos [tonal] lineas [2508.0, 3387.9] Hz | banda nan-nan Hz | muestras: -55 -230 -131 180 379 329 75 -165
+bytes 17152 | tramas validas 8 (total 1874) | CRC malo 0 | perdidas 0
+   seq 9606 | estado 0x00 | diagnostico #614 tipos [tonal] lineas [2508.0, 3387.9] Hz | banda nan-nan Hz | muestras: -183 -187 27 252 279 85 -150 -327
+bytes 17152 | tramas validas 8 (total 1882) | CRC malo 0 | perdidas 0
+   seq 9614 | estado 0x00 | diagnostico #615 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: -361 -227 78 197 57 -208 -411 -342
+bytes 17152 | tramas validas 8 (total 1890) | CRC malo 0 | perdidas 0
+   seq 9622 | estado 0x00 | diagnostico #615 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: -260 -48 201 202 -3 -183 -235 -44
+bytes 17152 | tramas validas 8 (total 1898) | CRC malo 0 | perdidas 0
+   seq 9630 | estado 0x00 | diagnostico #616 tipos [tonal] lineas [2508.0, 3387.7] Hz | banda nan-nan Hz | muestras: 82 324 389 181 -113 -210 -115 173
+bytes 17152 | tramas validas 8 (total 1906) | CRC malo 0 | perdidas 0
+   seq 9638 | estado 0x00 | diagnostico #616 tipos [tonal] lineas [2508.0, 3387.7] Hz | banda nan-nan Hz | muestras: 125 280 187 -82 -340 -320 -100 174
+bytes 17152 | tramas validas 8 (total 1914) | CRC malo 0 | perdidas 0
+   seq 9646 | estado 0x00 | diagnostico #617 tipos [tonal] lineas [2508.0, 3388.0] Hz | banda nan-nan Hz | muestras: 175 165 -67 -345 -385 -226 95 218
+bytes 17152 | tramas validas 8 (total 1922) | CRC malo 0 | perdidas 0
+   seq 9654 | estado 0x00 | diagnostico #617 tipos [tonal] lineas [2508.0, 3388.0] Hz | banda nan-nan Hz | muestras: 285 169 -101 -240 -103 171 398 304
+bytes 17152 | tramas validas 8 (total 1930) | CRC malo 0 | perdidas 0
+   seq 9662 | estado 0x00 | diagnostico #618 tipos [tonal] lineas [2508.0, 3388.1] Hz | banda nan-nan Hz | muestras: 270 65 -187 -178 44 262 273 85
+bytes 17152 | tramas validas 8 (total 1938) | CRC malo 0 | perdidas 0
+   seq 9670 | estado 0x00 | diagnostico #618 tipos [tonal] lineas [2508.0, 3388.1] Hz | banda nan-nan Hz | muestras: 6 -255 -370 -200 80 187 78 -243
+bytes 17152 | tramas validas 8 (total 1946) | CRC malo 0 | perdidas 0
+   seq 9678 | estado 0x00 | diagnostico #619 tipos [tonal] lineas [2508.0, 3388.0] Hz | banda nan-nan Hz | muestras: -213 -370 -258 -28 243 219 -2 -215
+bytes 17152 | tramas validas 8 (total 1954) | CRC malo 0 | perdidas 0
+   seq 9686 | estado 0x00 | diagnostico #619 tipos [tonal] lineas [2508.0, 3388.0] Hz | banda nan-nan Hz | muestras: -174 -176 98 353 359 176 -117 -212
+bytes 17152 | tramas validas 8 (total 1962) | CRC malo 0 | perdidas 0
+   seq 9694 | estado 0x00 | diagnostico #620 tipos [tonal] lineas [2508.0, 3388.0] Hz | banda nan-nan Hz | muestras: -232 -141 139 271 156 -167 -352 -326
+bytes 17152 | tramas validas 8 (total 1970) | CRC malo 0 | perdidas 0
+   seq 9702 | estado 0x00 | diagnostico #620 tipos [tonal] lineas [2508.0, 3388.0] Hz | banda nan-nan Hz | muestras: -338 -85 159 137 -132 -335 -384 -177
+bytes 17152 | tramas validas 8 (total 1978) | CRC malo 0 | perdidas 0
+   seq 9710 | estado 0x00 | diagnostico #621 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: -132 190 285 147 -136 -234 -111 218
+bytes 17152 | tramas validas 8 (total 1986) | CRC malo 0 | perdidas 0
+   seq 9718 | estado 0x08 | diagnostico #622 tipos [tonal] lineas [2508.0, 3388.0, 5492.2] Hz | banda nan-nan Hz | muestras: 276 397 275 0 -214 -165 11 238
+bytes 17152 | tramas validas 8 (total 1994) | CRC malo 0 | perdidas 0
+   seq 9726 | estado 0x00 | diagnostico #622 tipos [tonal] lineas [2508.0, 3388.0, 5492.2] Hz | banda nan-nan Hz | muestras: 231 235 10 -296 -396 -182 69 181
+bytes 17152 | tramas validas 8 (total 2002) | CRC malo 0 | perdidas 0
+   seq 9734 | estado 0x08 | diagnostico #623 tipos [tonal] lineas [2508.0, 3387.9, 5491.9] Hz | banda nan-nan Hz | muestras: 190 73 -228 -363 -231 13 239 206
+bytes 17152 | tramas validas 8 (total 2010) | CRC malo 0 | perdidas 0
+   seq 9742 | estado 0x00 | diagnostico #623 tipos [tonal] lineas [2508.0, 3387.9, 5491.9] Hz | banda nan-nan Hz | muestras: 285 31 -185 -147 110 352 365 162
+bytes 17152 | tramas validas 8 (total 2018) | CRC malo 0 | perdidas 0
+   seq 9750 | estado 0x00 | diagnostico #624 tipos [tonal] lineas [2508.0, 3387.8] Hz | banda nan-nan Hz | muestras: 101 -144 -245 -119 148 256 141 -179

@@ -9,7 +9,8 @@ Resumen para quienes trabajan en los nodos 2 y 3 y en el paper. El detalle de la
 | Trama **versión 3** | Cabecera de 92 bytes (antes 84). Nuevos campos 84–91: posición en el ciclo del emisor, inicio de ciclo en el bloque, componente que emite el emisor y estado de la referencia. Si el estado trae el bit 6 (`referencia`), después de las 1024 muestras vienen 1024 valores int16 de la referencia limpia (−32768 = sin referencia en esa muestra). | Leer la versión 3. Decodificador de referencia: `nodo1/validacion/trama.py`; en C++, `receptor_byte` del `.ino` del nodo 1 |
 | Referencia limpia para el MSE | El nodo 1 guarda un ciclo de la señal limpia tal como llega al micrófono (promedio de hasta 8 ciclos) y la manda en cada trama junto a las muestras de la mezcla | El nodo 3 calcula MSE y SNR con las muestras y la referencia de la misma trama |
 | Conexión | GPIO17 del nodo 1 (TX) → RX del otro ESP32, GND común, 921 600 baudios, 8N1 | — |
-| Parámetros del diagnóstico | `umbral_ocupacion_db` 40 → **30** y `ancho_linea_hz` 100 → **125** en `metadatos/diagnostico.json`; la simulación ya se regeneró | Usar el JSON actualizado |
+| Parámetros del diagnóstico | `umbral_ocupacion_db` 40 → **30**, `ancho_linea_hz` 100 → **125** y nuevo `separacion_impulsos_ms` = **30** en `metadatos/diagnostico.json`; la simulación ya se regeneró | Usar el JSON actualizado |
+| Ruido de P2 dentro de la banda útil | El parlante intermodula la banda de 2500–3800 Hz y genera ruido de 30 a 1300 Hz, 13–17 dB sobre la sala. Por eso el nodo 1 da confianza baja en P2: el ruido sí se superpone a la señal útil | Un pasa altos digital de ≈ 300 Hz en los nodos 2 y 3 quitaría la parte de 30–400 Hz (la útil empieza en 440 Hz) |
 | SNR real en el micrófono | No es 2 dB: de −8 a +1 dB según la prueba (tabla abajo) | Las métricas de entrada parten de esos valores |
 
 ## Emisor (`emisor/`)

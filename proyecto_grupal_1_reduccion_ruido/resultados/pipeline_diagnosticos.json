@@ -70,7 +70,7 @@
         "tipo": "linea"
       }
     ],
-    "tiempo_calculo_ms": 2.331710002181353
+    "tiempo_calculo_ms": 1.249629000085406
   },
   "caso_2": {
     "tipo": "banda",
@@ -144,7 +144,7 @@
         "tipo": "banda"
       }
     ],
-    "tiempo_calculo_ms": 2.48103499689023
+    "tiempo_calculo_ms": 1.3510359999600041
   },
   "caso_3": {
     "tipo": "banda",
@@ -190,7 +190,7 @@
       }
     ],
     "interferencias": [],
-    "tiempo_calculo_ms": 2.285087997734081
+    "tiempo_calculo_ms": 1.2321479998718132
   },
   "caso_5": {
     "tipo": "banda",
@@ -254,7 +254,7 @@
       }
     ],
     "interferencias": [],
-    "tiempo_calculo_ms": 3.6603270018531475
+    "tiempo_calculo_ms": 2.0476879999478115
   },
   "caso_6": {
     "tipo": "impulsivo",
@@ -285,7 +285,7 @@
       }
     ],
     "interferencias": [],
-    "tiempo_calculo_ms": 2.331153998966329
+    "tiempo_calculo_ms": 1.3423539999166678
   },
   "caso_7": {
     "tipo": "tonal",
@@ -340,6 +340,6 @@
         "tipo": "linea"
       }
     ],
-    "tiempo_calculo_ms": 2.015043002757011
+    "tiempo_calculo_ms": 1.1236010000175156
   }
 }

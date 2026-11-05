@@ -103,7 +103,7 @@ def parametros_proyecto():
     leer = lambda nombre: json.loads((RAIZ / 'metadatos' / nombre).read_text(encoding='utf-8-sig'))
     diag, esp, pipe = leer('diagnostico.json'), leer('filtro_espectral.json'), leer('pipeline.json')
     claves = ('umbral_ocupacion_db', 'hueco_fusion_bins', 'ancho_linea_hz', 'ancho_dc_hz', 'hueco_util_hz',
-              'margen_banda_util_hz', 'umbral_curtosis', 'k_atipicas_mad', 'armonicos_red_min',
+              'margen_banda_util_hz', 'umbral_curtosis', 'k_atipicas_mad', 'separacion_impulsos_ms', 'armonicos_red_min',
               'max_armonico_red', 'tolerancia_red_hz')
     p = {'fs_hz': esp['fs_hz'], 'n_bloque': esp['n_bloque'],
          'periodo_diag_ms': 1000 * pipe['segundos_diagnostico'], **{k: diag[k] for k in claves}}
