@@ -1,129 +1,101 @@
-/* PRUEBA AISLADA UART + OLED, ESP32-S3, Arduino-ESP32 3.x.
-   Nodo1 del ZIP development: TX GPIO17 -> S3 RX GPIO16; GND comun.
-   UART 921600/8N1. OLED SSD1306 128x64: SDA8 SCL9, 3.3V.
-   Bibliotecas: Adafruit SSD1306, Adafruit GFX Library y dependencias.
-   No usa filtros, PWM ni tareas propias. Apagar amplificador durante esta prueba.
-   Nodo1 USB921600, Nueva linea: fuente sint / tramas on.
-   Consola S3 opcional USB115200. La OLED funciona sin monitor USB.
-   Reiniciar S3 pone contadores en cero. No modificar nodo1.
-*/
+/* Prueba de recepción de las tramas del nodo 1 en el ESP32-S3 del nodo 2.
+ * Conexión: GPIO17 (TX) del nodo 1 -> GPIO16 (RX) de este S3, y GND común.
+ * Cada 0.5 s imprime los bytes recibidos y, sobre todo, las tramas válidas (delimitador A5 5A,
+ * versión 3 y CRC-32 correctos), los errores de CRC, las tramas perdidas (saltos en la
+ * secuencia) y el contenido de la última trama: secuencia, estado, diagnóstico y primeras muestras.
+ * Esperado con el nodo 1 capturando: ≈ 7.8 tramas por 0.5 s (una cada 64 ms), 0 errores de CRC
+ * y 0 perdidas. Si llegan bytes pero 0 tramas válidas, el baud rate o el cable están mal.
+ * El formato es el de nodo1/validacion/trama.py.
+ */
 #include <Arduino.h>
-#include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
-#include <stdint.h>
-#include <string.h>
 
-// BEGIN PARSER
-// Formato original v3: A5 5A, cabecera92, muestras int16 y referencia opcional.
-struct RxV3 {
-  uint8_t data[92+4*2048+4]{};
-  unsigned used=0;
-  uint32_t ok=0,crcErrors=0,headerErrors=0,seq=0;
-  uint16_t samples=0,flags=0;
-  int16_t first=0,minValue=0,maxValue=0;
-  static uint16_t u16(const uint8_t*p){return uint16_t(p[0])|(uint16_t(p[1])<<8);}
-  static uint32_t u32(const uint8_t*p){return u16(p)|(uint32_t(u16(p+2))<<16);}
-  static uint32_t crc(const uint8_t*p,unsigned n){
-    uint32_t c=0xffffffffu;
-    while(n--){c^=*p++;for(int k=0;k<8;k++)c=(c>>1)^((c&1)?0xedb88320u:0);}
-    return ~c;
+constexpr int PIN_RX = 16, PIN_TX = 15;
+constexpr uint32_t BAUDIOS = 921600;       // igual que BAUDIOS_TRAMA del nodo 1
+constexpr int CABECERA = 92, N_MAX = 2048;
+constexpr uint8_t SYNC0 = 0xA5, SYNC1 = 0x5A, VERSION = 3;
+constexpr uint16_t EST_REF = 64;           // bit del estado: la trama trae la referencia limpia
+const char* const TIPOS[] = {"impulsivo", "red_electrica", "tonal", "banda"};
+
+static uint8_t buf[CABECERA + 4 * N_MAX + 4];
+static int n = 0, esperado = 0;
+static uint32_t tabla_crc[256];
+static uint32_t validas = 0, errores_crc = 0, perdidas = 0, ultima_seq = 0;
+static bool hay_seq = false, hay_trama = false;
+
+uint16_t leer16(const uint8_t* p) { return p[0] | p[1] << 8; }
+uint32_t leer32(const uint8_t* p) { return leer16(p) | (uint32_t)leer16(p + 2) << 16; }
+float leerf(const uint8_t* p) { uint32_t u = leer32(p); float v; memcpy(&v, &u, 4); return v; }
+
+// CRC-32 IEEE (el mismo del nodo 1 y de zlib.crc32).
+uint32_t crc32(const uint8_t* p, size_t len) {
+  if (!tabla_crc[1])
+    for (uint32_t i = 0; i < 256; ++i) {
+      uint32_t c = i;
+      for (int k = 0; k < 8; ++k) c = c & 1 ? 0xEDB88320u ^ (c >> 1) : c >> 1;
+      tabla_crc[i] = c;
+    }
+  uint32_t c = 0xFFFFFFFFu;
+  for (size_t i = 0; i < len; ++i) c = tabla_crc[(c ^ p[i]) & 0xFF] ^ (c >> 8);
+  return ~c;
+}
+
+// Igual que receptor_byte del nodo 1: devuelve true cuando buf tiene una trama completa y válida.
+bool recibir(uint8_t b) {
+  if (n == 1 && b != SYNC1) n = 0;
+  if (n == 0) {
+    if (b == SYNC0) buf[n++] = b;
+    return false;
   }
-  void discard(unsigned n){memmove(data,data+n,used-n);used-=n;}
-  void clearPartial(){used=0;}
-  bool push(uint8_t b){
-    if(used==sizeof(data))discard(1);
-    data[used++]=b;
-    bool accepted=false;
-    for(;;){
-      if(used<2)return accepted;
-      if(data[0]!=0xa5||data[1]!=0x5a){discard(1);continue;}
-      if(used<4)return accepted;
-      if(data[2]!=3||data[3]!=92){headerErrors++;discard(1);continue;}
-      if(used<12)return accepted;
-      unsigned n=u16(data+8);
-      if(n==0||n>2048){headerErrors++;discard(1);continue;}
-      uint16_t f=u16(data+10);
-      unsigned length=92+2*n*((f&64)?2:1)+4;
-      if(used<length)return accepted;
-      if(crc(data+2,length-6)!=u32(data+length-4)){
-        crcErrors++;discard(1);continue;
-      }
-      seq=u32(data+4);samples=n;flags=f;
-      first=minValue=maxValue=int16_t(u16(data+92));
-      for(unsigned i=1;i<n;i++){
-        int16_t x=int16_t(u16(data+92+2*i));
-        if(x<minValue)minValue=x;if(x>maxValue)maxValue=x;
-      }
-      ok++;accepted=true;discard(length);
+  buf[n++] = b;
+  if (n == 4 && (buf[2] != VERSION || buf[3] != CABECERA)) { n = 0; return false; }
+  if (n == 10 && (leer16(buf + 8) == 0 || leer16(buf + 8) > N_MAX)) { n = 0; return false; }
+  if (n == 12) esperado = CABECERA + 2 * leer16(buf + 8) * (leer16(buf + 10) & EST_REF ? 2 : 1) + 4;
+  if (n < 12 || n < esperado) return false;
+  n = 0;
+  if (crc32(buf + 2, esperado - 6) != leer32(buf + esperado - 4)) { ++errores_crc; return false; }
+  const uint32_t seq = leer32(buf + 4);
+  if (hay_seq && seq != ultima_seq + 1) perdidas += seq - ultima_seq - 1;
+  ultima_seq = seq;
+  hay_seq = true;
+  ++validas;
+  return true;
+}
+
+void setup() {
+  Serial.begin(921600);                      // monitor serie del S3
+  Serial1.setRxBufferSize(16384);            // el de fábrica (256 B) se llena en < 3 ms a 921600
+  Serial1.begin(BAUDIOS, SERIAL_8N1, PIN_RX, PIN_TX);
+  delay(500);
+  Serial.println("Esperando tramas del nodo 1 (GPIO17 -> GPIO16, GND comun)...");
+}
+
+void loop() {
+  static uint32_t bytes = 0, inicio = 0, validas_antes = 0;
+  static uint8_t ultima[CABECERA + 2 * 8];   // cabecera y primeras 8 muestras de la última trama
+  while (Serial1.available() > 0) {
+    ++bytes;
+    if (recibir(Serial1.read())) {
+      memcpy(ultima, buf, sizeof(ultima));
+      hay_trama = true;
     }
   }
-};
-// END PARSER
-
-HardwareSerial uartNodo1(1);
-Adafruit_SSD1306 oled(128,64,&Wire,-1,100000,100000);
-RxV3 rx;
-bool oledOK=false;
-uint32_t totalBytes=0,lastByteMs=0,lastFrameMs=0,bytesPerSecond=0;
-uint8_t recent[4]{};
-unsigned recentCount=0;
-
-void showStatus(){
-  uint32_t now=millis();
-  const char* status=rx.ok&&uint32_t(now-lastFrameMs)<1000?"UART OK / CRC OK":
-    totalBytes&&uint32_t(now-lastByteMs)<1000?"BYTES, SIN TRAMA":
-    totalBytes?"SIN DATOS RECIENTES":"SIN BYTES UART";
-  if(oledOK){
-    oled.clearDisplay();oled.setTextSize(1);oled.setTextColor(SSD1306_WHITE);oled.setCursor(0,0);
-    oled.println(status);
-    oled.print("RX16 921600 ");oled.print(now/1000);oled.println("s");
-    oled.print("Bytes:");oled.println(totalBytes);
-    oled.print("B/s:");oled.print(bytesPerSecond);oled.print(" OK:");oled.println(rx.ok);
-    oled.print("CRC:");oled.print(rx.crcErrors);oled.print(" H:");oled.println(rx.headerErrors);
-    oled.print("Seq:");oled.print(rx.seq);oled.print(" N:");oled.println(rx.samples);
-    oled.print("Min:");oled.print(rx.minValue);oled.print(" M:");oled.println(rx.maxValue);
-    oled.print("Hex:");
-    for(unsigned i=0;i<recentCount;i++){if(recent[i]<16)oled.print('0');oled.print(recent[i],HEX);oled.print(' ');}
-    oled.display();
+  if (millis() - inicio < 500) return;
+  inicio = millis();
+  Serial.printf("bytes %lu | tramas validas %lu (total %lu) | CRC malo %lu | perdidas %lu\n", (unsigned long)bytes,
+                (unsigned long)(validas - validas_antes), (unsigned long)validas, (unsigned long)errores_crc,
+                (unsigned long)perdidas);
+  if (hay_trama) {
+    const uint16_t estado = leer16(ultima + 10);
+    Serial.printf("   seq %lu | estado 0x%02x%s | diagnostico #%lu tipos [", (unsigned long)leer32(ultima + 4), estado,
+                  estado & EST_REF ? " (con referencia)" : "", (unsigned long)leer32(ultima + 24));
+    for (int i = 0, primero = 1; i < 4; ++i)
+      if (ultima[28] & (1 << i)) Serial.printf(primero ? "%s" : ",%s", TIPOS[i]), primero = 0;
+    Serial.printf("] lineas [");
+    for (int i = 0; i < ultima[30]; ++i) Serial.printf(i ? ", %.1f" : "%.1f", leerf(ultima + 36 + 4 * i));
+    Serial.printf("] Hz | banda %.0f-%.0f Hz | muestras:", leerf(ultima + 52), leerf(ultima + 56));
+    for (int i = 0; i < 8; ++i) Serial.printf(" %d", (int16_t)leer16(ultima + CABECERA + 2 * i));
+    Serial.println();
   }
-  // No esperar a que el PC abra la consola.
-  if(Serial){
-    Serial.printf("%s bytes=%lu B/s=%lu validas=%lu CRC=%lu cabecera=%lu seq=%lu N=%u flags=0x%02X muestra0=%d min=%d max=%d\n",
-      status,(unsigned long)totalBytes,(unsigned long)bytesPerSecond,(unsigned long)rx.ok,
-      (unsigned long)rx.crcErrors,(unsigned long)rx.headerErrors,(unsigned long)rx.seq,
-      rx.samples,rx.flags,rx.first,rx.minValue,rx.maxValue);
-  }
-}
-void setup(){
-  // Mantener ambas salidas de audio bajas: esta prueba NO reproduce sonido.
-  pinMode(17,OUTPUT);digitalWrite(17,LOW);pinMode(18,OUTPUT);digitalWrite(18,LOW);
-  Serial.begin(115200);
-  Wire.begin(8,9,100000);Wire.setTimeOut(30);
-  for(uint8_t address=0x3c;address<=0x3d;address++){
-    Wire.beginTransmission(address);
-    if(Wire.endTransmission()==0){oledOK=oled.begin(SSD1306_SWITCHCAPVCC,address,true,false);break;}
-  }
-  // Absorbe bytes mientras se actualiza la pantalla a 100 kHz.
-  uartNodo1.setRxBufferSize(32768);
-  uartNodo1.begin(921600,SERIAL_8N1,16,15);
-  showStatus();
-}
-void loop(){
-  if(rx.used&&uint32_t(millis()-lastByteMs)>200)rx.clearPartial();
-  unsigned budget=16384; // actualizar OLED aunque exista trafico continuo
-  while(budget--&&uartNodo1.available()){
-    uint8_t b=uartNodo1.read();totalBytes++;lastByteMs=millis();
-    if(recentCount<4)recent[recentCount++]=b;
-    else {memmove(recent,recent+1,3);recent[3]=b;}
-    if(rx.push(b))lastFrameMs=millis();
-  }
-  static uint32_t previousMs=0,previousBytes=0,lastScreen=0;
-  uint32_t now=millis();
-  if(uint32_t(now-previousMs)>=1000){
-    bytesPerSecond=uint32_t(uint64_t(totalBytes-previousBytes)*1000/(now-previousMs));
-    previousBytes=totalBytes;previousMs=now;
-  }
-  if(uint32_t(now-lastScreen)>=500){lastScreen=now;showStatus();}
-  delay(1);
+  bytes = 0;
+  validas_antes = validas;
 }
