@@ -1,0 +1,68 @@
+{
+  "prueba_declarada": "P1",
+  "repeticion": 1,
+  "nota": "Etiqueta asignada por el operador; verificar el emisor.",
+  "s3": {
+    "schema": 1,
+    "firmware": "nodos23-export-2",
+    "fs_hz": 16000,
+    "n_samples": 23040,
+    "capture_id": 18,
+    "duration_s": 1.44,
+    "finish": "Captura completa",
+    "payload_bytes": 192528,
+    "sample_fields": [
+      "fir",
+      "fft",
+      "mezcla",
+      "referencia"
+    ],
+    "invalid_reference": -32768,
+    "reference_samples": 23040,
+    "energy_samples": 23040,
+    "reference_pct": 100.0,
+    "nfft": 1024,
+    "hop": 512,
+    "n_bins": 513,
+    "window": "hann_periodica",
+    "spectrum_frames": 44,
+    "spectrum_scope": "referencia_comun",
+    "spectrum_fields": [
+      "referencia",
+      "mezcla",
+      "fir",
+      "fft"
+    ],
+    "spectrum_unit": "dB re 1 codigo_ADC^2/Hz",
+    "spectrum_floor_db": -200,
+    "fir_delay_compensated_samples": 40,
+    "spectral_alpha": 1.5,
+    "spectral_floor": 0.05,
+    "counters_delta": {
+      "crc": 0,
+      "lost": 0,
+      "queue": 0,
+      "restarts": 0
+    },
+    "metrics": {
+      "entrada": {
+        "mse": 25723.83832,
+        "snr_db": -8.081933633
+      },
+      "fir": {
+        "mse": 186.659592,
+        "snr_db": 13.31092096,
+        "delta_snr_db": 21.39285459,
+        "useful_energy_pct": 99.94086384,
+        "pwm_clips": 0
+      },
+      "fft": {
+        "mse": 123.5746094,
+        "snr_db": 15.10213162,
+        "delta_snr_db": 23.18406525,
+        "useful_energy_pct": 99.37629559,
+        "pwm_clips": 0
+      }
+    }
+  }
+}

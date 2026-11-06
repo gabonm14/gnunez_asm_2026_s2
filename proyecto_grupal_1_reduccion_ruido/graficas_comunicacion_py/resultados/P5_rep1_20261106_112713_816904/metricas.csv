@@ -1,0 +1,4 @@
+metodo,mse_codigo_adc2,snr_db,delta_snr_db,energia_util_pct,recortes_pwm
+Entrada,4587.117144,-3.008420096,,,
+FIR,4237.290495,-2.663904174,0.3445159229,99.80285257,0
+FFT/IFFT,1749.756988,1.177200849,4.185620945,91.87807859,0

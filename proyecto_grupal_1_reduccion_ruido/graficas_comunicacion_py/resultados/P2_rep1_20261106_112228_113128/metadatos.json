@@ -1,5 +1,5 @@
 {
-  "prueba_declarada": "P3",
+  "prueba_declarada": "P2",
   "repeticion": 1,
   "nota": "Etiqueta asignada por el operador; verificar el emisor.",
   "s3": {
@@ -7,7 +7,7 @@
     "firmware": "nodos23-export-2",
     "fs_hz": 16000,
     "n_samples": 23040,
-    "capture_id": 1,
+    "capture_id": 20,
     "duration_s": 1.44,
     "finish": "Captura completa",
     "payload_bytes": 192528,
@@ -46,21 +46,21 @@
     },
     "metrics": {
       "entrada": {
-        "mse": 1052.782161,
-        "snr_db": 0.9423955316
+        "mse": 13088.99384,
+        "snr_db": -7.690677593
       },
       "fir": {
-        "mse": 175.3537326,
-        "snr_db": 8.726630559,
-        "delta_snr_db": 7.784235027,
-        "useful_energy_pct": 98.62053705,
+        "mse": 611.0509983,
+        "snr_db": 5.617610459,
+        "delta_snr_db": 13.30828805,
+        "useful_energy_pct": 99.80530774,
         "pwm_clips": 0
       },
       "fft": {
-        "mse": 120.5395833,
-        "snr_db": 10.35448385,
-        "delta_snr_db": 9.412088316,
-        "useful_energy_pct": 92.77604007,
+        "mse": 259.9369358,
+        "snr_db": 9.329705089,
+        "delta_snr_db": 17.02038268,
+        "useful_energy_pct": 98.43412722,
         "pwm_clips": 0
       }
     }
