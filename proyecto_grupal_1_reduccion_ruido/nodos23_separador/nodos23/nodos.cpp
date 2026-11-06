@@ -153,8 +153,8 @@ static void procesar(const Salto& actual) {
           k%=H;
           auto a=pcm(fuente.fir[k]), b=pcm(y[i]);
           audio::clip[trabajo.muestras++]={a,b};
-          if (a/4 < -256 || a/4 > 255) ++trabajo.m.recortePWM[0];
-          if (b/4 < -256 || b/4 > 255) ++trabajo.m.recortePWM[1];
+          if (audio::nivel(a)!=audio::aPwm(a)) ++trabajo.m.recortePWM[0];
+          if (audio::nivel(b)!=audio::aPwm(b)) ++trabajo.m.recortePWM[1];
           trabajo.m.sumar(previo.x[i],previo.ref[i],a,b,fuente.firLimpia[k],limpiaY[i],utilOK);
         }
         if (trabajo.muestras==audio::capacidad) cerrar("Captura completa");
