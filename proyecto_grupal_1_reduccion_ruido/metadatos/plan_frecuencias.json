@@ -1,0 +1,21 @@
+{
+  "separacion_minima_hz": 80,
+  "latencia_buffer_max_ms": 64,
+  "n_candidatos": [256, 512, 1024, 2048],
+  "barrido_separacion": {
+    "separaciones_hz": [5, 10, 20, 30, 45, 60, 80, 100, 125, 150, 200, 300],
+    "snr_entrada_db": 2.0,
+    "semillas": [20261101, 20261102, 20261103],
+    "duracion_s": 1.0,
+    "prominencia_pico_db": 20,
+    "tolerancia_tono_util_bins": 1
+  },
+  "readaptacion": {
+    "frecuencia_inicial_hz": 2500,
+    "frecuencia_final_hz": 3100,
+    "instante_cambio_s": 1.0,
+    "duracion_s": 2.0,
+    "umbral_error_db": -30,
+    "ventana_envolvente_ms": 2
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "mcu": "ESP32 (LEDC)",
+  "reloj_ledc_hz": 80000000,
+  "bits_pwm": 8,
+  "osr_pwm": 16,
+  "sub_muestras": 8,
+  "vdd_v": 3.3,
+  "orden_rc": 2,
+  "R1_ohm": 1000,
+  "C1_nf": 10,
+  "R2_ohm": 1000,
+  "C2_nf": 10,
+  "bloque_simulacion_muestras": 2048,
+  "tolerancia_sqnr_db": 3.0
+}

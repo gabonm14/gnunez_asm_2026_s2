@@ -23,6 +23,7 @@ python -m src.analisis
 python -m src.filtros_temporales
 python -m src.filtrado_espectral
 python -m src.comparacion
+python -m src.plan_frecuencias
 python -m src.actualizar_informe
 python -m unittest discover -s tests -v
 ```
@@ -32,9 +33,6 @@ python -m unittest discover -s tests -v
 Configuraciones y semillas en `metadatos/`; WAV y NPZ float64 en `pruebas/caso_X/`. Las referencias exactas para métricas son NPZ, ya que PCM16 cuantiza. `resultados/metricas.csv` es la comparación final de nueve filas sobre un intervalo común. Los tiempos se regeneran por máquina; no son resultados del firmware.
 
 El informe PDF incluido contiene resultados del entorno de referencia indicado en `resultados/comparacion_metadatos.json`. Si quiere usar los tiempos de su computadora, ejecute comparación, actualice tablas y recompile. El resto de métricas debe coincidir salvo precisión numérica.
-
-
-
 
 ## Uso de IA
 

@@ -1,0 +1,10 @@
+{
+  "familias": ["butterworth", "chebyshev1"],
+  "familia_principal": "butterworth",
+  "margen_rizado": 0.98,
+  "margen_atenuacion_db": 1.0,
+  "bits_fraccion_coef": 14,
+  "umbral_asentamiento": 1e-4,
+  "tolerancia_atol": 1e-10,
+  "tolerancia_rtol": 1e-8
+}

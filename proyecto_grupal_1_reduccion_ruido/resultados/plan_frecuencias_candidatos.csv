@@ -1,0 +1,5 @@
+n_bloque,delta_f_hz,separacion_teorica_hz,separacion_medida_hz,latencia_buffer_ms,salto_ms,readaptacion_ms,residuo_antes_db,residuo_despues_db,memoria_base_bytes,cumple_resolucion,cumple_latencia
+256,62.5,250.0,,16.0,8.0,11.3125,-111.19352474741517,-41.27631612254616,9248,False,True
+512,31.25,125.0,125,32.0,16.0,28.9375,-126.60675304373584,-48.7882999254487,18464,False,True
+1024,15.625,62.5,80,64.0,32.0,43.0,-141.14743213329075,-41.27626785331975,36896,True,True
+2048,7.8125,31.25,45,128.0,64.0,74.375,-162.4330894566109,-48.73429318977384,73760,True,False

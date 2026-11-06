@@ -86,6 +86,13 @@ def preparar_registro(x, N, H):
     return extendida, inicios, pad
 
 
+def memoria_base_bytes(N):
+    """Buffers de trabajo float32/complex64 para bloques de N muestras (K=N/2+1 bins).
+    """
+    K = N//2+1
+    return 4*(5*N+4*K)+16*K
+
+
 def reducir_espectral(x, config, reduccion=True, ganancias=None):
     """Referencia offline por marcos, con estado adaptativo causal por marco.
 
@@ -220,12 +227,12 @@ def ejecutar_espectral(casos=None):
     axs[1].set(xlabel='Fuerza de reducción alpha',ylabel='MSE del componente útil',title='Caso 3: distorsión de señal útil')
     for ax in axs:ax.grid(True,alpha=.25)
     guardar_figura(fig,figuras/'espectral_compromiso.png')
-    N,H=config['n_bloque'],config['salto'];K=N//2+1
+    N,H=config['n_bloque'],config['salto']
     resumen={**config,'ventana_analisis':'Hann periódica','ventana_sintesis':'Hann periódica',
              'normalizacion':'suma de cuadrados de ventanas','delta_f_hz':config['fs_hz']/N,
              'duracion_marco_ms':1000*N/config['fs_hz'],'intervalo_marcos_ms':1000*H/config['fs_hz'],
              'nota_latencia':'Salida offline alineada; la latencia física debe medirse en hardware.',
-             'memoria_base_float32_complex64_bytes':4*(5*N+4*K)+16*K,
+             'memoria_base_float32_complex64_bytes':memoria_base_bytes(N),
              'nota_memoria':'Estimación de buffers de trabajo; no incluye biblioteca FFT, pila, comunicación ni máscaras históricas offline.',
              'nota_metodo':'Mediana local y suavizado: heurística adaptativa, no estimador óptimo ni separación garantizada.',
              'informacion_previa':'Banda útil nominal; no se usan referencia limpia ni ruido aislado al estimar ganancias.'}

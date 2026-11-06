@@ -1,0 +1,8 @@
+{
+  "adc_bits": 12,
+  "vref_v": 3.3,
+  "segundos_diagnostico": 1.0,
+  "metodos": ["FIR", "IIR", "espectral_fijo", "espectral_adaptativo"],
+  "familia_iir": "butterworth",
+  "casos": null
+}
