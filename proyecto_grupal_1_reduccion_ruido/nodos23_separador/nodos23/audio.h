@@ -20,8 +20,14 @@ static inline __attribute__((always_inline)) void duty(ledc_channel_t canal,int 
   ledc_ll_set_duty_start(&LEDC,LEDC_LOW_SPEED_MODE,canal);
   ledc_ll_ls_channel_update(&LEDC,LEDC_LOW_SPEED_MODE,canal);
 }
+// Nivel PWM sin limitar: ±2048 (rango del ADC de 12 bits sin DC) -> 0..512.
+// Redondeo con desplazamiento aritmético: x/8 truncaría hacia cero y dejaría
+// una zona muerta de 15 códigos alrededor del silencio.
+static inline __attribute__((always_inline)) int nivel(int x) {
+  return 256+((x+4)>>3); // misma ganancia en A y B; altavoz se regula con el PAM
+}
 static inline __attribute__((always_inline)) int aPwm(int x) {
-  int d=256+x/4; // misma ganancia en A y B; altavoz se regula con el PAM
+  int d=nivel(x);
   return d<0 ? 0 : (d>511 ? 511 : d);
 }
 static void IRAM_ATTR tick() {
